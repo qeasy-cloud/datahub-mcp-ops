@@ -56,7 +56,7 @@ jobs:
           mkdir -p dist
           git archive --format=zip --prefix="datahub-mcp-ops-${TAG}/" -o "dist/datahub-mcp-ops-${TAG}.zip" HEAD
           ls -l dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: datahub-mcp-ops-${{ github.ref_name }}
           path: dist/*.zip
