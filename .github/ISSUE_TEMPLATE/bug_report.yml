@@ -1,0 +1,63 @@
+name: Bug report
+description: Something in the skill is wrong, stale, or misleading.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Do not paste real keys, customer data, or app_secret.**
+        If this is a security issue, use SECURITY.md instead of a public issue.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area?
+      options:
+        - references/01-platform-model
+        - references/02-tool-catalog
+        - references/03-debug-loop
+        - references/04-write-recipe
+        - references/05-diagnostics
+        - references/06-knowledge-mcp
+        - references/07-security-and-limits
+        - references/08-anti-patterns
+        - playbooks
+        - scripts (dh.py / validate / smoke)
+        - tools/manifest
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What does the skill claim?
+      description: Quote the sentence or command.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happens?
+      description: Include the tool name, key fields of the response (redacted), and error code if any.
+      placeholder: |
+        Tool: strategy.queue.job.run
+        Return: {"ok":true,"has_data":false,...}
+        Expected: ...
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: SKILL version + server capability version (`meta.capabilities` → tool_count).
+      placeholder: "skill 2.0.0 / capability 2026-10-28 / 46 tools"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `python scripts/validate_skill.py -v`
+        - label: I removed all secrets/customer data from this report
+          required: true

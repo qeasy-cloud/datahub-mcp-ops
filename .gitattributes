@@ -1,0 +1,18 @@
+# Normalize line endings for a cross-platform docs/scripts repo.
+* text=auto eol=lf
+
+*.md      text eol=lf
+*.py      text eol=lf
+*.json    text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.cff     text eol=lf
+*.svg     text eol=lf
+
+# Binary-ish assets
+*.png     binary
+*.jpg     binary
+*.zip     binary
+
+# Keep the generated manifest diffable and reviewed, not hidden.
+tools/manifest.json  text eol=lf linguist-generated=true

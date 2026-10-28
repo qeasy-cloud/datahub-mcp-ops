@@ -1,0 +1,45 @@
+name: Feature / new knowledge
+description: Propose a new diagnostic, playbook, example, or mechanic clarification.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What are you adding?
+      options:
+        - 新的症状 → 判据 → 处置（diagnostics）
+        - 新剧本（playbooks）
+        - 真实会话记录（examples）
+        - 平台机制修正（platform-model）
+        - 工具契约更新（tool-catalog）
+        - 脚本 / CI 改进
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What task does this unblock?
+      description: Describe the real situation where the current skill gives no answer.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed content
+      description: Draft the entry. Prefer concrete tool calls and judgement criteria over prose.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Redacted response fragments, docs reference, or platform knowledge doc id.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: No secrets, no customer data
+          required: true
+        - label: I checked it is not already covered (search the repo first)

@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If this skill package helped your work, please cite it as below."
+title: "Datahub MCP Ops Skill"
+abstract: >-
+  An executable, agent-facing playbook for operating and implementing integrations on
+  Datahub (轻易云) through its MCP endpoint: daemon-free job debugging, field-mapping
+  repair, target-write verification, diagnostics and safe cleanup.
+version: 2.0.0
+date-released: "2026-10-28"
+license: MIT
+url: "https://github.com/qeasy-cloud/datahub-mcp-ops"
+repository-code: "https://github.com/qeasy-cloud/datahub-mcp-ops"
+keywords:
+  - mcp
+  - model-context-protocol
+  - datahub
+  - qeasy
+  - integration-platform
+  - ipaas
+  - agent-skills
+  - runbook
+authors:
+  - name: "qeasy.cloud contributors"
+    url: "https://www.qeasy.cloud"
+references:
+  - type: software
+    title: "Model Context Protocol specification"
+    url: "https://modelcontextprotocol.io/specification"
+  - type: software
+    title: "Datahub MCP server (datahub-mcp 0.1.0)"
+    version: "0.1.0"
+    notes: "Server-side capability version 2026-10-28, 46 tools."

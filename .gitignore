@@ -1,0 +1,25 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Local secrets & scratch files used by examples
+.env
+.env.*
+!.env.example
+args.json
+*.key
+*.pem
+
+# Python scratch outputs
+/tmp/
+*.log

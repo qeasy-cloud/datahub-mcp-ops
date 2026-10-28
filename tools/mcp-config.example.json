@@ -1,0 +1,51 @@
+{
+  "_comment": "Copy the block for your client. Replace <HOST> and paste your own key; never commit a real key.",
+  "mcpServers": {
+    "datahub": {
+      "type": "http",
+      "url": "https://<HOST>/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${DH_MCP_KEY}"
+      }
+    }
+  },
+  "_alternatives": {
+    "claude_desktop": {
+      "mcpServers": {
+        "datahub": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "mcp-remote",
+            "https://<HOST>/api/mcp",
+            "--header",
+            "Authorization: Bearer ${DH_MCP_KEY}"
+          ]
+        }
+      }
+    },
+    "vscode": {
+      "servers": {
+        "datahub": {
+          "type": "http",
+          "url": "https://<HOST>/api/mcp",
+          "headers": {
+            "Authorization": "Bearer ${env:DH_MCP_KEY}"
+          }
+        }
+      }
+    },
+    "knowledge": {
+      "_comment": "Public knowledge MCP (stateless). Separate key, separate endpoint.",
+      "mcpServers": {
+        "qeasy-knowledge": {
+          "type": "http",
+          "url": "https://mcp.qeasy.cloud/api/mcp",
+          "headers": {
+            "Authorization": "Bearer ${QEASY_KNOWLEDGE_KEY}"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+# Default owners for everything in the repository.
+# Reviews are requested automatically on pull requests.
+*                       @qeasy-cloud/maintainers
+
+# Tool contracts and the generated manifest need an extra look:
+# a wrong change here makes every downstream agent call a non-existent tool.
+/tools/                 @qeasy-cloud/maintainers
+/SKILL.md               @qeasy-cloud/maintainers
+/references/02-tool-catalog.md  @qeasy-cloud/maintainers
+
+# CI and release plumbing.
+/.github/               @qeasy-cloud/maintainers
+/scripts/               @qeasy-cloud/maintainers

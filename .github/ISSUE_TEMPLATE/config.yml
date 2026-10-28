@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/qeasy-cloud/datahub-mcp-ops/security/advisories/new
+    about: Do not open a public issue for security problems. See SECURITY.md.
+  - name: Datahub / 轻易云 product support
+    url: https://www.qeasy.cloud
+    about: Platform bugs, account issues, and licensing are handled by the product team.
+  - name: Public knowledge MCP
+    url: https://www.qeasy.cloud/mcp
+    about: Docs and registration for the read-only knowledge endpoint (qk_live_ keys).

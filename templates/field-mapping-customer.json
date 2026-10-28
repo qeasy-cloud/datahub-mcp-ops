@@ -1,0 +1,161 @@
+{
+  "strategyId": "<strategyId>",
+  "patch": {
+    "request": [
+      {
+        "field": "FNumber",
+        "label": "编码",
+        "type": "string",
+        "is_required": true,
+        "value": "{{FNumber}}"
+      },
+      {
+        "field": "FName",
+        "label": "名称",
+        "type": "string",
+        "is_required": true,
+        "value": "{{FName}}"
+      },
+      {
+        "field": "FCreateOrgId",
+        "label": "创建组织",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FCreateOrgId_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FUseOrgId",
+        "label": "使用组织",
+        "type": "string",
+        "is_required": true,
+        "value": "{{FUseOrgId_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FDescription",
+        "label": "描述",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FDescription}}"
+      },
+      {
+        "field": "FCustTypeId",
+        "label": "客户类别",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FCustTypeId_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FGroup",
+        "label": "客户分组",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FGroup_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FSALDEPTID",
+        "label": "销售部门",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FSALDEPTID_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FSELLER",
+        "label": "销售员",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FSELLER_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FSETTLETYPEID",
+        "label": "结算方式",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FSETTLETYPEID_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FRECCONDITIONID",
+        "label": "收款条件",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FRECCONDITIONID_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FShortName",
+        "label": "简称",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FShortName}}"
+      },
+      {
+        "field": "FADDRESS",
+        "label": "地址",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FADDRESS}}"
+      },
+      {
+        "field": "FTEL",
+        "label": "电话",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FTEL}}"
+      },
+      {
+        "field": "FFAX",
+        "label": "传真",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FFAX}}"
+      },
+      {
+        "field": "FCompanyClassify",
+        "label": "公司类别",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FCompanyClassify_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      },
+      {
+        "field": "FINVOICETITLE",
+        "label": "发票抬头",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FINVOICETITLE}}"
+      },
+      {
+        "field": "FINVOICEBANKACCOUNT",
+        "label": "银行账号",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FINVOICEBANKACCOUNT}}"
+      },
+      {
+        "field": "FCURRENCYID",
+        "label": "币别",
+        "type": "string",
+        "is_required": false,
+        "value": "{{FCURRENCYID_FNumber}}",
+        "parser": { "name": "ConvertObjectParser", "params": "FNumber" }
+      }
+    ],
+    "otherRequest": [
+      { "field": "FormId", "value": "BD_Customer" },
+      { "field": "Operation", "value": "BatchSave" },
+      { "field": "IsAutoSubmitAndAudit", "value": "true" },
+      { "field": "IsVerifyBaseDataField", "value": "true" }
+    ],
+    "operation": {
+      "rowsKey": "array",
+      "rows": 50,
+      "method": "batchArraySave"
+    }
+  }
+}

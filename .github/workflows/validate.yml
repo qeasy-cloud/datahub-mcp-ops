@@ -1,0 +1,62 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python syntax (scripts)
+        run: |
+          python -m compileall -q scripts
+          echo "scripts compiled"
+
+      - name: Skill package validation (offline)
+        run: python scripts/validate_skill.py -v
+
+      - name: Manifest matches JSON Schema
+        run: |
+          python -m pip install --quiet jsonschema
+          python - <<'PY'
+          import json, pathlib, jsonschema
+          root = pathlib.Path(".")
+          manifest = json.loads((root / "tools/manifest.json").read_text(encoding="utf-8"))
+          schema = json.loads((root / "tools/manifest.schema.json").read_text(encoding="utf-8"))
+          jsonschema.validate(manifest, schema)
+          print("manifest ok:", manifest["tool_count"], "tools")
+          PY
+
+      - name: Markdown lint (non-blocking)
+        continue-on-error: true
+        run: npx --yes markdownlint-cli2 "**/*.md" "#node_modules"
+
+  package:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build distributable archive
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          git archive --format=zip --prefix="datahub-mcp-ops-${TAG}/" -o "dist/datahub-mcp-ops-${TAG}.zip" HEAD
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: datahub-mcp-ops-${{ github.ref_name }}
+          path: dist/*.zip
