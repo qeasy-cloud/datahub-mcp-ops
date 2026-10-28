@@ -5,7 +5,7 @@ abstract: >-
   An executable, agent-facing playbook for operating and implementing integrations on
   Datahub (轻易云) through its MCP endpoint: daemon-free job debugging, field-mapping
   repair, target-write verification, diagnostics and safe cleanup.
-version: 2.0.0
+version: 2.1.0
 date-released: "2026-10-28"
 license: MIT
 url: "https://github.com/qeasy-cloud/datahub-mcp-ops"

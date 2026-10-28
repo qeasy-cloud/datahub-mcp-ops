@@ -14,7 +14,7 @@ reviewed in a PR instead of disappearing into a web form.
 
 ### Description (GitHub "About", ≤350 chars)
 
-> An executable playbook that teaches AI agents to operate Datahub (轻易云) through its MCP endpoint: daemon-free job debugging, field-mapping repair for Kingdee, write verification, diagnostics and safe cleanup. 46 tools, zero-dependency CLI, docs-as-tests CI.
+> An executable playbook that teaches AI agents to operate Datahub (轻易云) through its MCP endpoint: daemon-free job debugging, field-mapping repair for Kingdee, static value mapping, write verification, diagnostics and safe cleanup. Zero-dependency CLI, docs-as-tests CI.
 
 Length: 265 characters.
 
@@ -82,7 +82,7 @@ python scripts/dh.py manifest > tools/manifest.json
 # 3. gates
 python scripts/validate_skill.py -v
 python -m compileall -q scripts
-python scripts/smoke_test.py --expect-tools 46      # needs a tenant; read-only
+python scripts/smoke_test.py --expect-tools 58      # needs a tenant; read-only
 
 # 4. rebuild the distributable (optional, CI does it on tag)
 #    Windows: robocopy the skill directory, then Compress-Archive (see the repo install notes)
@@ -97,7 +97,7 @@ git push origin main --tags
 
 ```bash
 gh repo create qeasy-cloud/datahub-mcp-ops --public \
-  --description "An executable playbook that teaches AI agents to operate Datahub (轻易云) through its MCP endpoint: daemon-free job debugging, field-mapping repair for Kingdee, write verification, diagnostics and safe cleanup. 46 tools, zero-dependency CLI, docs-as-tests CI." \
+  --description "An executable playbook that teaches AI agents to operate Datahub (轻易云) through its MCP endpoint: daemon-free job debugging, field-mapping repair for Kingdee, static value mapping, write verification, diagnostics and safe cleanup. Zero-dependency CLI, docs-as-tests CI." \
   --homepage "https://www.qeasy.cloud" \
   --license MIT
 

@@ -37,6 +37,25 @@ dh call strategy.log.search --args '{"strategyId":"<SID>","level":"error,fatal"}
 | `params.Model` 缺必填 | 映射不全 | 按接口资产补字段 |
 | 数据 `status=3` | 写入失败 | 看 `result[].problem` + `exception.search` |
 | 数据 `status=6` | 被标记"跳过调度" | 确认是否人为设置；需要时 `data.setStatus {status:"await"}` |
+| 值原样传下去了 | **静态映射没命中**（无精确行且无 `*` 兜底） | `mapping.resolve` 看 `matched`；补行或补 `*` 兜底 |
+| 字段挂映射但不翻译 | 挂在**源端顶层标量**上（设计不生效） | 改挂目标端字段，或挂到 object/array 子项 |
+
+---
+
+## 2.1 映射"配了没生效"（静态映射专项）
+
+按这个顺序排查，每步都有明确判据：
+
+| # | 动作 | 判据 | 结论 |
+|---|---|---|---|
+| 1 | `mapping.usage {categoryId}` | `refCount=0` | 分类**根本没挂上**，去改方案字段（不是映射本身的问题） |
+| 2 | `mapping.usage`（无参） | `orphans` 非空 | 方案引用了**已删除的分类** → 原值直通；换回存在的分类 |
+| 3 | `mapping.resolve {value}` | `matched=none` | 该值没配对、也无 `*` 兜底 → 运行时原值直通（**不报错**） |
+| 4 | `mapping.resolve {direction:"reverse"}` | 反向也不对 | 方向选反了：positive 是 a→b |
+| 5 | `queue.job.get {rawParams:true}` | 报文里是映射前的值 | 挂载位置/方向有问题（或挂在源端顶层标量） |
+| 6 | 报文里是映射后的值，但外部系统仍不符 | 值对了 | 问题不在映射：查 parser、默认值、目标字段类型 |
+
+> 关键认知：静态映射**未命中永远静默**。所以"没生效"99% 是"没配对"，不是平台 bug。
 
 ---
 

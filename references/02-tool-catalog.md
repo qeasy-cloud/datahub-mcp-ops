@@ -1,4 +1,4 @@
-# 02 · Tool 目录（46 个：43 业务 + 3 meta）
+# 02 · Tool 目录（58 个：55 业务 + 3 meta）
 
 > 机器可读清单：`../tools/manifest.json`（由服务端代码生成，CI 校验文档一致性）。
 > 命名：`域.对象.动作`。风险：🟢 `read` / 🟡 `write` / 🟠 `ops` / 🔴 `destructive`。
@@ -219,7 +219,47 @@
 
 ---
 
-## 10. 工具选择速查
+## 10. 静态映射（12，🟢 `mapping:read` / 🟡 `mapping:write`）
+
+资源中心 → 静态映射资源。**值翻译表**：把源系统的 `1/2/0` 翻译成目标系统的 `男/女/未知`，
+或把 `发票类型` 翻译成金蝶编码。两系统对接几乎必用。数据在租户 Mongo（`A_MAPPING_CATEGORY` /
+`A_MAPPING_RELATION`），机制细节见 `01-platform-model.md` §3.7。
+
+| Tool | 风险 | 作用 |
+|---|---|---|
+| `mapping.category.list` | 🟢 | 分类清单（名称搜索 + 每类条数），**先拿 categoryId** |
+| `mapping.category.get` | 🟢 | 分类详情：样本、是否含 `*` 兜底、**被哪些方案字段引用**、可复制的挂载片段 |
+| `mapping.category.create` | 🟡 | 新建分类（名称租户内唯一） |
+| `mapping.category.update` | 🟡 | 改名/改说明（方案存的是 id，改名不影响引用） |
+| `mapping.category.delete` | 🔴 | 删分类**并连带删全部对照**；仍被引用时拒绝，需 `force=true` |
+| `mapping.relation.list` | 🟢 | 分页查对照；不传 `categoryId` 则跨分类搜索（回答"这个值被配到哪了"） |
+| `mapping.relation.create` | 🟡 | 新增一条（`a_value` 分类内唯一；`*` 是兜底行，每类一条） |
+| `mapping.relation.update` | 🟡 | 按 `relationId` 改值/说明，返回 before/after |
+| `mapping.relation.delete` | 🔴 | 删一条；之后该值变为"未命中"（有 `*` 走兜底，否则原值直通） |
+| `mapping.relation.import` | 🟡 | 批量 upsert（对应平台"导入 Excel"），≤500 行，支持 `dryRun` |
+| `mapping.resolve` | 🟢 | **单值/批量试算**，与运行时同一语义；返回 `matched=exact/wildcard/none` |
+| `mapping.usage` | 🟢 | 反查引用：哪些方案/字段/方向在用；无参时汇总全部 + **孤儿引用**（引用了已删分类） |
+
+### 典型串联
+
+```
+mapping.category.create            → categoryId
+mapping.relation.import            → 灌 50 条对照（repeat 可直接重跑，幂等）
+（把 categoryId 写进目标端字段）    → strategy.target.update {patch:...}
+mapping.resolve                    → 抽 3 个值确认方向/兜底
+mapping.usage                      → 确认引用已生效
+strategy.dispatchTarget → queue.job.get {rawParams:true} → 报文里看到翻译后的值
+```
+
+**三个高频坑**：
+
+1. `mapping.resolve` 报 `matched=none` = 该值没配对且无 `*` 兜底，运行时**原值直通、不报错**。
+2. 源端（Query）只有 object/array 子项走映射，顶层标量挂上去不会生效（见 `01` §3.7）。
+3. `mapping.category.delete` 是 🔴：会连带删除全部对照；被引用时工具会拒绝（`mapping_category_in_use`）。
+
+---
+
+## 11. 工具选择速查
 
 | 我想… | 用 |
 |---|---|
@@ -238,3 +278,6 @@
 | 新方案（推荐） | `strategy.copy` → 改 → `checkList` → `online` |
 | 重推错误数据 | `data.setStatus {status:"await"}` → `dispatchTarget` → `queue.job.run` |
 | 查谁改了什么 | `audit.search {payload:"full"}` |
+| 值翻译 / 静态映射 | `mapping.category.list` → `mapping.relation.import` → `mapping.resolve` |
+| 确认映射配得对不对 | `mapping.resolve`（单值试算）+ `mapping.usage`（谁在用） |
+| 看最终报文长什么样 | `strategy.queue.job.get {rawParams:true}` |

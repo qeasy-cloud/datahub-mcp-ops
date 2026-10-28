@@ -3,9 +3,9 @@
     "server": "datahub-mcp",
     "server_version": "0.1.0",
     "capability_version": "2026-10-28",
-    "generated_at": "2026-10-28T08:33:06+08:00",
-    "tool_count": 46,
-    "business_tool_count": 43,
+    "generated_at": "2026-10-28T10:06:27+08:00",
+    "tool_count": 58,
+    "business_tool_count": 55,
     "meta_tools": [
         {
             "name": "meta.whoami",
@@ -156,6 +156,200 @@
                 "endTime",
                 "currentPage",
                 "pageSize"
+            ]
+        },
+        {
+            "name": "mapping.category.create",
+            "title": "新建静态映射分类",
+            "scope": "mapping:write",
+            "risk": "write",
+            "requires_confirmation": true,
+            "description": "新建一个静态映射分类（资源中心 → 静态映射资源）。分类名在租户内唯一。建好后用 mapping.relation.create / mapping.relation.import 填 a_value → b_value，最后把返回的 categoryId 挂到方案字段的 mapping.target 上。",
+            "required": [
+                "name"
+            ],
+            "properties": [
+                "name",
+                "describe"
+            ]
+        },
+        {
+            "name": "mapping.category.delete",
+            "title": "删除静态映射分类",
+            "scope": "mapping:write",
+            "risk": "destructive",
+            "requires_confirmation": true,
+            "description": "删除一个静态映射分类，**并连带删除其全部 a/b 映射关系**，不可恢复。默认会先扫描引用：若该分类仍被方案字段使用，直接拒绝（错误码 mapping_category_in_use）；确认要删必须显式 force=true。首次调用返回影响面预检与确认令牌。",
+            "required": [
+                "categoryId"
+            ],
+            "properties": [
+                "categoryId",
+                "force",
+                "dryRun",
+                "confirmationToken"
+            ]
+        },
+        {
+            "name": "mapping.category.get",
+            "title": "静态映射分类详情",
+            "scope": "mapping:read",
+            "risk": "read",
+            "requires_confirmation": false,
+            "description": "读取单个静态映射分类：名称/描述、条数、前 N 条映射样本、**被哪些方案的哪些字段引用**（含方向），并给出可直接粘进 meta_data 的 mapping 片段。排查\"映射配了但没生效\"时先看这里：引用为空 = 根本没挂上。",
+            "required": [
+                "categoryId"
+            ],
+            "properties": [
+                "categoryId",
+                "sampleSize",
+                "includeUsage"
+            ]
+        },
+        {
+            "name": "mapping.category.list",
+            "title": "静态映射分类清单",
+            "scope": "mapping:read",
+            "risk": "read",
+            "requires_confirmation": false,
+            "description": "列出本租户的静态映射分类（如\"性别\"\"发票类型\"），含每个分类的映射条数与最近更新时间。可按名称搜索、分页。静态映射用于把源系统的值翻译成目标系统的值（a_value → b_value）。**先用本工具拿 categoryId，再查 mapping.relation.list / mapping.category.get。**",
+            "required": [],
+            "properties": [
+                "search",
+                "currentPage",
+                "pageSize"
+            ]
+        },
+        {
+            "name": "mapping.category.update",
+            "title": "修改静态映射分类",
+            "scope": "mapping:write",
+            "risk": "write",
+            "requires_confirmation": true,
+            "description": "修改静态映射分类的名称或说明。改名不影响已挂载的方案（方案里存的是 categoryId，不是名称），返回 before/after 便于复核。",
+            "required": [
+                "categoryId"
+            ],
+            "properties": [
+                "categoryId",
+                "name",
+                "describe"
+            ]
+        },
+        {
+            "name": "mapping.relation.create",
+            "title": "新增映射关系",
+            "scope": "mapping:write",
+            "risk": "write",
+            "requires_confirmation": true,
+            "description": "在指定分类下新增一条映射关系。a_value 在分类内唯一；a_value=\"*\" 是兜底行（每个分类只能有一条，命中不到任何精确值时使用）。批量导入用 mapping.relation.import 更快。",
+            "required": [
+                "categoryId",
+                "aValue",
+                "bValue"
+            ],
+            "properties": [
+                "categoryId",
+                "aValue",
+                "bValue",
+                "aLabel",
+                "bLabel"
+            ]
+        },
+        {
+            "name": "mapping.relation.delete",
+            "title": "删除映射关系",
+            "scope": "mapping:write",
+            "risk": "destructive",
+            "requires_confirmation": true,
+            "description": "按 relationId 删除一条映射关系。删除后该值在映射中变成\"未命中\"：若有 * 兜底行则走兜底，否则**原值直通**（不报错）。首次调用返回预检与确认令牌。",
+            "required": [
+                "relationId"
+            ],
+            "properties": [
+                "relationId",
+                "dryRun",
+                "confirmationToken"
+            ]
+        },
+        {
+            "name": "mapping.relation.import",
+            "title": "批量导入映射关系",
+            "scope": "mapping:write",
+            "risk": "write",
+            "requires_confirmation": true,
+            "description": "批量写入映射关系（对应平台\"导入 Excel\"）。按 a_value 在分类内 upsert：已存在则更新 b_value/label，不存在则新增。单次 ≤500 行；支持 dryRun 预检（只返回将新增/更新多少）。行格式：{\"aValue\":\"1\",\"bValue\":\"男\"} 或 {\"a_value\":\"1\",\"b_value\":\"男\",\"a_label\":\"...\",\"b_label\":\"...\"}。",
+            "required": [
+                "categoryId",
+                "rows"
+            ],
+            "properties": [
+                "categoryId",
+                "rows",
+                "mode",
+                "dryRun"
+            ]
+        },
+        {
+            "name": "mapping.relation.list",
+            "title": "静态映射关系清单",
+            "scope": "mapping:read",
+            "risk": "read",
+            "requires_confirmation": false,
+            "description": "按分类分页查询映射关系（a_value → b_value，含可选 a_label/b_label）。不传 categoryId 时跨分类搜索，用于回答\"这个值到底被映射成什么/哪个分类里配了它\"。a_value=\"*\" 表示兜底行（未命中时使用）。",
+            "required": [],
+            "properties": [
+                "categoryId",
+                "search",
+                "currentPage",
+                "pageSize"
+            ]
+        },
+        {
+            "name": "mapping.relation.update",
+            "title": "修改映射关系",
+            "scope": "mapping:write",
+            "risk": "write",
+            "requires_confirmation": true,
+            "description": "按 relationId 修改一条映射的 a_value / b_value / 说明。只改传入的字段，返回 before/after。改 a_value 时仍会做分类内唯一性校验。",
+            "required": [
+                "relationId"
+            ],
+            "properties": [
+                "relationId",
+                "aValue",
+                "bValue",
+                "aLabel",
+                "bLabel"
+            ]
+        },
+        {
+            "name": "mapping.resolve",
+            "title": "试算静态映射结果",
+            "scope": "mapping:read",
+            "risk": "read",
+            "requires_confirmation": false,
+            "description": "按平台**完全相同的语义**试算映射结果，不改任何数据：给定分类 + 值 + 方向（positive=a→b，reverse=b→a），返回命中结果、命中方式（exact/wildcard/none）与命中行。支持一次传多个值。排查\"映射配了但结果不对\"时，这是最快的判据：matched=none 说明这个值没配对且无 * 兜底，平台会原值返回。",
+            "required": [
+                "categoryId"
+            ],
+            "properties": [
+                "categoryId",
+                "value",
+                "values",
+                "direction"
+            ]
+        },
+        {
+            "name": "mapping.usage",
+            "title": "静态映射引用关系",
+            "scope": "mapping:read",
+            "risk": "read",
+            "requires_confirmation": false,
+            "description": "反查本租户所有方案里挂了静态映射的字段：方案、方向、字段名、映射分类与映射方向。不传 categoryId 时返回全量引用汇总 + **孤儿引用**（引用了已删除/不存在的分类 id）。删除分类前、或排查\"映射好像没挂上\"时用它。",
+            "required": [],
+            "properties": [
+                "categoryId"
             ]
         },
         {
@@ -599,7 +793,8 @@
                 "strategyId",
                 "direction",
                 "jobId",
-                "includeK3Sdk"
+                "includeK3Sdk",
+                "rawParams"
             ]
         },
         {

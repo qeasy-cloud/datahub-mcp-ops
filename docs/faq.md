@@ -44,12 +44,12 @@ v2 起默认 `sections=basic`（只给摘要），因为单条全量约 40KB，�
 ## 工具数量为什么和文档不一致？
 
 用 `meta.capabilities` 的 `tool_count` 对比。常见原因：
-① 服务端版本不同（39 vs 46）；② 密钥 scope 不足；③ `read_only` 档位。
+① 服务端版本不同（39 / 46 / 58）；② 密钥 scope 不足；③ `read_only` 档位。
 `docs/clients.md` §4 有兼容矩阵。
 
 ## 两个 MCP 有什么区别？
 
-- **Datahub MCP**（租户端点）：46 个工具，读写你的真实数据，有状态。
+- **Datahub MCP**（租户端点）：58 个工具，读写你的真实数据，有状态。
 - **知识 MCP**（`mcp.qeasy.cloud`）：3 个工具，只读官方知识，无状态。
 前者回答"现在是什么"，后者回答"应该怎么配"。见 `references/06-knowledge-mcp.md`。
 

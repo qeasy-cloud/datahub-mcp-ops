@@ -10,7 +10,7 @@
 | 方式 | 适合 | 优点 | 代价 |
 |---|---|---|---|
 | `scripts/dh.py` | 任何环境、CI、脚本化 | 零依赖、可脚本、可 `manifest` 生成清单 | 需要 Python 3.9+ |
-| 客户端原生 MCP 配置 | 日常对话式使用 | Agent 自动发现 46 个工具 | 需要客户端支持 Streamable HTTP |
+| 客户端原生 MCP 配置 | 日常对话式使用 | Agent 自动发现 58 个工具 | 需要客户端支持 Streamable HTTP |
 | 平台 UI / REST | 人工核对、浏览器调试 | 直观 | 不是 Agent 路径；REST 会返回明文凭据 |
 
 ### 1.1 `dh.py`（推荐作为兜底与 CI）
@@ -96,7 +96,8 @@ POST tools/call {"name":"…","arguments":{…}}
 | 能力版本 | 工具数 | 关键差异 | 本 SKILL |
 |---|---|---|---|
 | `2026-10-26` | 39 | 无 `queue.job.*` / `log.search` / `script.validate` / `connector.*` | v1.x（已归档） |
-| `2026-10-28` | **46** | 新增 7 个；`get` 默认 `basic`；dispatch 停止态放行；预演+熔断 | **v2.0.0（当前）** |
+| `2026-10-28` | 46 | 新增 7 个；`get` 默认 `basic`；dispatch 停止态放行；预演+熔断 | v2.0.0 |
+| `2026-10-28`（含静态映射） | **58** | 新增 12 个 `mapping.*`；`queue.job.get` 支持 `rawParams` | **v2.1.0（当前）** |
 
 > 用 `meta.capabilities` 的 `tool_count` 快速判断服务端版本；
 > 与 `tools/manifest.json` 的 `capability_version` 对比即可知道文档是否过期。

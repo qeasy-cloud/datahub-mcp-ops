@@ -7,7 +7,7 @@
 > | 端点 | `https://mcp.qeasy.cloud/api/mcp` | 你的租户实例 `/api/mcp` |
 > | 形态 | **无状态**（每请求自带 Key；`GET`/`DELETE` → 405） | 有状态（`Mcp-Session-Id`） |
 > | 密钥 | `qk_live_…`（Agent 可 PoW 自助注册，Standard 20 次/天） | `sh-…`（租户开放中心签发） |
-> | 工具 | 3 个：`knowledge_domains` / `knowledge_search` / `knowledge_fetch` | 46 个运维/实施工具 |
+> | 工具 | 3 个：`knowledge_domains` / `knowledge_search` / `knowledge_fetch` | 58 个运维/实施工具 |
 > | 回答 | 文档 + 可追溯引用 | 真实配置与执行结果 |
 >
 > **分工**：知识 MCP 回答"应该怎么配"（字段、口径、案例）；Datahub MCP 回答"现在是什么、改了会怎样"。

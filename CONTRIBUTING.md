@@ -29,7 +29,7 @@ python scripts/dh.py manifest > tools/manifest.json
 
 # 3. 有测试端点时跑只读冒烟
 export DH_MCP_URL=... DH_MCP_KEY=...
-python scripts/smoke_test.py --expect-tools 46
+python scripts/smoke_test.py --expect-tools 58
 ```
 
 ## 文档规范

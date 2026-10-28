@@ -44,8 +44,11 @@ dh call strategy.dispatchTarget --args '{"strategyId":"<SID>"}'
 
 ```bash
 dh call strategy.queue.job.get --args '{
-  "strategyId":"<SID>","direction":"target","jobId":"<TID>"}'
+  "strategyId":"<SID>","direction":"target","jobId":"<TID>","rawParams":true}'
 ```
+
+> 必须带 `rawParams:true`：默认会把深层结构折叠成 `{"__object":true,"__count":9}`，
+> 看不到 `Model` 里的真实字段值，这一步就白做了。
 
 逐项检查 `params`：
 
@@ -53,9 +56,22 @@ dh call strategy.queue.job.get --args '{
 |---|---|---|
 | `FormId` | 与业务对象一致（如 `BD_Customer`/`SAL_SaleOrder`） | 改 `target.update` 的 `otherRequest` |
 | `Model` 字段值 | 都是真实值，**不是 null/空串** | 改映射 `{{源字段}}` |
+| **值翻译** | 如 `FSex` 已是目标系统枚举（`1/2`），不是源系统的 `男/女` | 挂静态映射：见下方「映射自检」 |
 | 基础资料字段 | 形如 `{"FNumber":"…"}` | 加 `ConvertObjectParser` |
 | 明细 | 数组里有内容（或本对象确实无明细） | 检查 `_Flist` 别名 |
 | 单号 | 稳定业务单号（不是时间戳/随机） | 修 `id`/`number` 与映射 |
+
+#### 映射自检（值没被翻译时按顺序做）
+
+```bash
+dh call mapping.usage    --args '{"categoryId":"<CID>"}'          # ① 真的挂上了吗（refCount>0）
+dh call mapping.resolve  --args '{"categoryId":"<CID>","value":"男"}'   # ② matched 是 exact/wildcard/none
+dh call mapping.relation.list --args '{"categoryId":"<CID>","search":"男"}'  # ③ 表里到底有没有这行
+```
+
+- `matched=none` → 无精确行也无 `a_value="*"` 兜底 → 运行时**原值直通、不报错**，这就是"没生效"。
+- 挂在**源端顶层标量**上不会生效（源端只有 object/array 子项走映射）→ 改成挂目标端字段。
+- 方向反了就加 `"direction":"reverse"`。
 
 > 这一步就是"人类在调试面板上点开请求体看一眼"的等价物。**不要跳**。
 

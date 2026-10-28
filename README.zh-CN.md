@@ -9,9 +9,9 @@
 无守护进程调试 · 修复字段映射 · 验证写入 · 定位故障 · 安全清理
 
 [![validate](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml/badge.svg)](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-2.0.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-2.1.0-blue)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![tools](https://img.shields.io/badge/MCP_tools-46-informational)](tools/manifest.json)
+[![tools](https://img.shields.io/badge/MCP_tools-58-informational)](tools/manifest.json)
 [![python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](scripts/dh.py)
 
 [English](README.md) · **简体中文**
@@ -47,12 +47,12 @@
 
 | | |
 |---|---|
-| **8 篇 references** | 平台机制、46 个工具、调试闭环、写入配方、诊断字典、知识 MCP、安全边界、反模式 |
+| **8 篇 references** | 平台机制、58 个工具、调试闭环、写入配方、诊断字典、知识 MCP、安全边界、反模式 |
 | **4 个 playbooks** | 源侧跑通 · 目标端真实写入 · 从需求到上线 · 批量运维与收尾 |
 | **2 个实例** | 可直接复制的提示词 · 一次真实（脱敏）调试会话 |
 | **零依赖 CLI** | `scripts/dh.py`：`doctor`/`tools`/`call`/`manifest`/`raw`，仅需 Python 3.9+ 标准库 |
 | **质量门禁** | 离线校验器、在线只读冒烟、由服务端生成的工具清单 |
-| **覆盖 46 个工具** | 含让"无守护进程调试"成为可能的 7 个新工具 |
+| **覆盖 58 个工具** | 含让"无守护进程调试"成为可能的 7 个新工具 |
 
 ---
 
@@ -68,7 +68,7 @@ export DH_MCP_URL="https://<你的域名>/api/mcp"
 export DH_MCP_KEY="sh-..."          # 平台开放中心签发的租户密钥
 
 python scripts/dh.py doctor         # 端点 · 密钥 · 协议 · 工具数
-python scripts/dh.py tools          # 46 个工具，按域分组
+python scripts/dh.py tools          # 58 个工具，按域分组
 python scripts/dh.py call meta.whoami
 python scripts/dh.py call strategy.dbInfo --param strategyId=<方案ID>
 ```
@@ -168,7 +168,7 @@ sequenceDiagram
 
 ---
 
-## 工具覆盖（46 = 43 业务 + 3 meta）
+## 工具覆盖（58 = 55 业务 + 3 meta）
 
 | 域 | 工具 |
 |---|---|
@@ -179,11 +179,26 @@ sequenceDiagram
 | **strategy 写**（6） | `create` `copy` `update` `source.update` `target.update` `config.rollback` |
 | **生命周期**（5） | `start` `stop` `online` `offline` `checkList` |
 | **数据/清理**（6） | `data.import` `data.setStatus` `dbResetStatus` `data.clean` `queue.clean` `data.cleanAll` |
+| **静态映射**（12） | 分类 `category.list/get/create/update/delete` · 关系 `relation.list/create/update/delete/import` · `resolve` `usage` |
 | **script**（6） | `list` `get` `validate` `create` `write` `delete` |
 | **audit**（1） | `search` |
 
-其中 **5 个不可逆**：`data.clean`、`queue.clean`、`data.cleanAll`、`script.delete`、`data.setStatus`。
+其中 **5 + 1 个不可逆**：`data.clean`、`queue.clean`、`data.cleanAll`、`script.delete`、`data.setStatus`，
+以及 `mapping.category.delete`（连带删除该分类下全部对照关系）。
 完整契约与坑：[`references/02-tool-catalog.md`](references/02-tool-catalog.md)；机器可读清单：[`tools/manifest.json`](tools/manifest.json)。
+
+### 静态映射：两系统对接的日常件
+
+集成里最常干的事之一是"值翻译"：源系统 `1/2/0` → 目标系统 `男/女/未知`，发票类型 → 金蝶编码。
+本 SKILL 把静态映射当作一等资源：建分类、批量灌对照、**用与运行时完全相同的语义单值试算**
+（`mapping.resolve`）、反查哪些方案在用它（`mapping.usage`，含"引用了已删分类"的孤儿引用）。
+
+```text
+mapping.category.create → mapping.relation.import → mapping.resolve → mapping.usage
+```
+
+三个高频坑：未命中**静默原值直通**（不报错）；源端只有 object/array 子项走映射（顶层标量不生效）；
+删分类会连带删对照（被引用时工具直接拒绝）。
 
 ---
 
@@ -221,7 +236,7 @@ Agent 不该把知识配额浪费在"这平台怎么跑"上。本仓库自带一
 ```bash
 python scripts/validate_skill.py -v   # 离线：结构、frontmatter、清单↔文档一致性、链接、密钥
 python scripts/dh.py manifest > tools/manifest.json   # 服务端升级后刷新
-DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 46   # 在线只读冒烟
+DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 58   # 在线只读冒烟
 ```
 
 - `tools/manifest.json` 由**服务端生成**，不是手写；文档提到不存在的工具，CI 直接失败。
@@ -239,7 +254,7 @@ playbooks/                  4 个可执行剧本
 examples/                   提示词 + 真实调试会话
 scripts/                    dh.py（CLI）· validate_skill.py（离线）· smoke_test.py（在线）
 tools/                      manifest.json（生成）· schema · 客户端配置
-templates/                  方案蓝图·报告·字段映射样例·46 工具验收矩阵
+templates/                  方案蓝图·报告·字段映射样例·58 工具验收矩阵
 docs/                       架构·客户端·FAQ·发布·素材
 .github/                    CI · issue/PR 模板 · CODEOWNERS
 ```
@@ -251,7 +266,7 @@ docs/                       架构·客户端·FAQ·发布·素材
 ## 路线图
 
 - [x] v2.0.0 — 无守护进程调试闭环、7 个新工具、影响面熔断、平台机制蒸馏
-- [ ] v2.1 — 46 工具验收矩阵纳入发布门禁；目标端真实写入验证配方
+- [ ] v2.1 — 58 工具验收矩阵纳入发布门禁；目标端真实写入验证配方
 - [ ] v2.2 — 按平台扩充错误字典（金蝶 → 旺店通/采购云）
 - [ ] v3.0 — 场景库（多方案编排、对账模式）
 

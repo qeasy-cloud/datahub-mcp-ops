@@ -4,6 +4,36 @@ All notable changes to this skill package are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-10-28
+
+Static value mapping（静态映射，资源中心 → 静态映射资源）成为一等能力：
+服务端新增 12 个 `mapping.*` 工具（39 → 46 → **58**），SKILL 补齐机制、工具、诊断与反模式。
+
+### Added
+
+- **12 个新工具**（scope：`mapping:read` / `mapping:write`，只读档位含 `mapping:read`）
+  - 分类：`mapping.category.list/get/create/update/delete`
+  - 对照：`mapping.relation.list/create/update/delete/import`（批量 upsert，≤500 行，支持 `dryRun`）
+  - 判据：`mapping.resolve`（与运行时同一语义试算）、`mapping.usage`（反查引用 + 孤儿引用）
+- **`mapping.category.get`**：一次给出样本、是否有 `*` 兜底、被哪些方案字段引用、可复制的挂载片段。
+- **`mapping.usage`**：扫描全部方案 `meta_data`，输出方案/方向/字段/方向，并检测"引用了已删分类"的孤儿引用。
+- **`strategy.queue.job.get {rawParams:true}`**：返回不折叠的 `params`——排查字段映射时能看到最终报文（默认仍折叠）。
+- 文档：`references/01` §3.7（机制与**生效位置不对称**）、`references/02` §10（12 工具 + 典型串联）、
+  `references/05` §2.1（"映射配了没生效"六步判据）、`references/08` C7/C8、`SKILL.md` §4.1。
+
+### Fixed
+
+- `mapping.relation.delete` 误把分类集合当关系集合查询（`list($relations) = collections()` 取错返回值）。
+- `mapping.*` 的值参数只接受 string，Agent 传 `1`/`100` 会被入参校验拒绝；现接受数字/布尔并统一转字符串。
+- 删除分类仍被方案引用时，现在**在发确认令牌之前**直接拒绝（`mapping_category_in_use`），不再让人先拿令牌再被拒。
+
+### Verification
+
+- `qa-mapping.php`：**38 条断言全绿**，含端到端运行时证明——
+  目标端 `FName` 配 `MAPTEST → 映射后名称` 后 `dispatchTarget`，`queue.job.get {rawParams:true}`
+  的报文里 `FName = 映射后名称`，且不再出现常量 `MAPTEST`。
+- PHPUnit `--filter Mcp`：265 passed / 9 skipped（tool 计数与 scope 预设同步到 58 / 11）。
+
 ## [2.0.0] - 2026-10-28
 
 Major rewrite against **`datahub-mcp 0.1.0` / `x-capability-version 2026-10-28` (46 tools)**.

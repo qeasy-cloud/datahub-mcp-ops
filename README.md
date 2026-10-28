@@ -9,9 +9,9 @@
 Debug jobs without a daemon · repair field mappings · verify writes · diagnose failures · clean up safely
 
 [![validate](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml/badge.svg)](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-2.0.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-2.1.0-blue)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![tools](https://img.shields.io/badge/MCP_tools-46-informational)](tools/manifest.json)
+[![tools](https://img.shields.io/badge/MCP_tools-58-informational)](tools/manifest.json)
 [![python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](scripts/dh.py)
 [![MCP](https://img.shields.io/badge/MCP-2025--06--18-6E56CF)](docs/clients.md)
 
@@ -48,12 +48,12 @@ It is written for agents first (progressive disclosure) and remains readable for
 
 | | |
 |---|---|
-| **8 references** | Platform mechanics, all 46 tools, debug loop, write recipe, diagnostics, knowledge MCP, security, anti-patterns |
+| **8 references** | Platform mechanics, all 58 tools, debug loop, write recipe, diagnostics, knowledge MCP, security, anti-patterns |
 | **4 playbooks** | Source-side bring-up · target-side real write · requirement-to-production · batch ops & cleanup |
 | **2 worked examples** | Copy-paste prompts · a real (redacted) debug session with actual responses |
 | **Zero-dependency CLI** | `scripts/dh.py` — `doctor` / `tools` / `call` / `manifest` / `raw`, Python 3.9+ stdlib only |
 | **Quality gates** | Offline validator, live read-only smoke test, and a manifest generated from the server itself |
-| **46 tools covered** | Including the seven that make daemon-free debugging possible |
+| **58 tools covered** | Including the seven that make daemon-free debugging possible |
 
 ---
 
@@ -69,7 +69,7 @@ export DH_MCP_URL="https://<your-host>/api/mcp"
 export DH_MCP_KEY="sh-..."          # tenant key from the platform console
 
 python scripts/dh.py doctor         # endpoint · key · protocol · tool count
-python scripts/dh.py tools          # 46 tools, grouped by domain
+python scripts/dh.py tools          # 58 tools, grouped by domain
 python scripts/dh.py call meta.whoami
 python scripts/dh.py call strategy.dbInfo --param strategyId=<STRATEGY_ID>
 ```
@@ -168,7 +168,7 @@ Step-by-step: [`playbooks/p1-debug-source.md`](playbooks/p1-debug-source.md) →
 
 ---
 
-## Tool coverage (46 = 43 business + 3 meta)
+## Tool coverage (58 = 55 business + 3 meta)
 
 | Domain | Tools |
 |---|---|
@@ -179,12 +179,26 @@ Step-by-step: [`playbooks/p1-debug-source.md`](playbooks/p1-debug-source.md) →
 | **strategy write** (6) | `create` `copy` `update` `source.update` `target.update` `config.rollback` |
 | **lifecycle** (5) | `start` `stop` `online` `offline` `checkList` |
 | **data & cleanup** (6) | `data.import` `data.setStatus` `dbResetStatus` `data.clean` `queue.clean` `data.cleanAll` |
+| **static mapping** (12) | `category.list/get/create/update/delete` · `relation.list/create/update/delete/import` · `resolve` `usage` |
 | **script** (6) | `list` `get` `validate` `create` `write` `delete` |
 | **audit** (1) | `search` |
 
-Five of them are **irreversible** (`data.clean`, `queue.clean`, `data.cleanAll`, `script.delete`, `data.setStatus`).
+Five of them are **irreversible** (`data.clean`, `queue.clean`, `data.cleanAll`, `script.delete`, `data.setStatus`),
+plus `mapping.category.delete` which also removes every value pair it owns.
 Full contracts, arguments, return shapes and gotchas: [`references/02-tool-catalog.md`](references/02-tool-catalog.md).
 Machine-readable snapshot: [`tools/manifest.json`](tools/manifest.json).
+
+### Static value mapping (the everyday case)
+
+Integrations constantly translate values between systems — `1/2/0` → `男/女/未知`, invoice types → Kingdee codes.
+The skill treats mappings as a first-class resource: list/create categories, bulk-import pairs,
+**dry-run a single value with the exact runtime semantics** (`mapping.resolve`), and reverse-look-up
+which strategies reference a mapping (`mapping.usage`, including *orphan* references to deleted categories).
+
+```text
+mapping.category.create → mapping.relation.import → mapping.resolve → mapping.usage
+```
+
 
 ---
 
@@ -223,7 +237,7 @@ Degrade gracefully: Markdown alone is a usable runbook; add Python for automatio
 ```bash
 python scripts/validate_skill.py -v   # offline: structure, frontmatter, manifest↔docs consistency, links, secrets
 python scripts/dh.py manifest > tools/manifest.json   # refresh after a server upgrade
-DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 46   # live, read-only
+DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 58   # live, read-only
 ```
 
 - `tools/manifest.json` is **generated from the server**, not hand-written; CI fails if a documented tool does not exist.
@@ -241,7 +255,7 @@ playbooks/                  4 runnable scenarios
 examples/                   prompts + a real debug transcript
 scripts/                    dh.py (CLI) · validate_skill.py (offline) · smoke_test.py (live)
 tools/                      manifest.json (generated) · schema · client config
-templates/                  blueprint · report · field-mapping sample · 46-tool acceptance matrix
+templates/                  blueprint · report · field-mapping sample · 58-tool acceptance matrix
 docs/                       architecture · clients · FAQ · releasing · assets
 .github/                    CI · issue & PR templates · CODEOWNERS
 ```
@@ -253,7 +267,7 @@ Documentation map and reading paths: [`SKILL.md`](SKILL.md) §9.
 ## Roadmap
 
 - [x] v2.0.0 — daemon-free debug loop, 7 new tools, blast-radius circuit breaker, platform mechanics digest
-- [ ] v2.1 — 46-tool acceptance matrix run as a release gate; target-side live verification recipe
+- [ ] v2.1 — 58-tool acceptance matrix run as a release gate; target-side live verification recipe
 - [ ] v2.2 — error catalogue expansion per platform (Kingdee → Wangdian/Purchase-Cloud)
 - [ ] v3.0 — scenario library (multi-strategy orchestration, reconciliation patterns)
 

@@ -190,6 +190,46 @@
 
 > 源：`domains/02-value-and-transform.md`
 
+### 3.7 静态映射（值翻译表，两系统对接的常规件）
+
+资源中心 → 静态映射资源。**它不是 MySQL 的两张 `dh_mapping_*` 表**（那两个 Model 是历史遗留，控制器不用）；
+真实数据在**租户 Mongo**：
+
+| 集合 | 文档结构 | 唯一约束 |
+|---|---|---|
+| `A_MAPPING_CATEGORY` | `{_id, name, describe?, created_at}` | `name` 租户内唯一 |
+| `A_MAPPING_RELATION` | `{_id, category(=分类 id 字符串), a_value, b_value, a_label?, b_label?, created_at}` | `(category, a_value)` 唯一 |
+
+**挂载方式**（字段项上，`request` / `response` 都适用）：
+
+```json
+{ "field": "FName", "value": "{{FName}}", "mapping": { "target": "<categoryId>", "direction": "positive" } }
+```
+
+兼容旧写法：`"mapping": "<categoryId>"` + 平级 `"mappingDirection": "positive|reverse"`。
+
+**转换语义**（`MappingStorage::run`，逐字复刻才是真相）：
+
+| 方向 | 规则 | 未命中时 |
+|---|---|---|
+| `positive` | `a_value → b_value` | 精确 → `a_value="*"` 兜底行 → **原值返回（不报错）** |
+| `reverse` | `b_value → a_value` | 同上 |
+
+**求值顺序**：取值 → 常量 → 类型转换 → **mapping** → `default` → `parser`。
+
+#### 生效位置不对称（排查"映射没生效"的关键）
+
+| 侧 | 顶层标量字段 | object / array 子项 |
+|---|---|---|
+| 目标端 `ExecuteCollation`（写入） | ✅ 生效（`run()` 里直接调 `_mapping`） | ✅ 生效 |
+| 源端 `QueryCollation`（取数） | ❌ **不生效**（`run()` 里没有 `_mapping`） | ✅ 生效 |
+
+所以把映射挂在源端 `FilterString`/`Limit` 这类顶层标量上是**设计上就不会生效**的；源端只有嵌套结构
+（如 `{...}` 查询参数对象、明细数组）里的子字段会翻译。绝大多数场景映射都用在**目标端字段**。
+
+> 源：`ExecuteCollation.php:78-88`、`QueryCollation.php:25-54`、`MappingStorage.php:42-89`、`RelationRepository.php`。
+> MCP 侧：`mapping.resolve` 复刻同一语义；`mapping.usage` 扫 `meta_data` 反查引用（含"引用了已删分类"的孤儿引用）。
+
 ---
 
 ## 4. 运行时链：数据从哪来、卡在哪

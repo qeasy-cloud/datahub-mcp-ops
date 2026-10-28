@@ -43,7 +43,7 @@ Two different MCP servers, deliberately separated:
 | Purpose | read/write **your** tenant | read **documentation** |
 | State | stateful (`Mcp-Session-Id`) | stateless (each request carries a key) |
 | Auth | `sh-…` tenant key | `qk_live_…` agent-registrable key |
-| Tools | 46 | 3 |
+| Tools | 58 | 3 |
 
 The skill uses the first to observe and act, the second only for facts a distilled document cannot hold
 (object field lists, customer cases, cross-platform semantics).

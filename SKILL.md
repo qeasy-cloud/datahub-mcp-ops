@@ -10,7 +10,7 @@ description: >
   wants it understood, fixed or verified.
 license: MIT
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   homepage: https://github.com/qeasy-cloud/datahub-mcp-ops
   capability_version: "2026-10-28"
   min_server: datahub-mcp 0.1.0
@@ -49,7 +49,7 @@ metadata:
 ```bash
 # ① 客户端（零依赖，Python 3.9+；也可用任意 MCP 客户端）
 python scripts/dh.py doctor                     # 检查端点/密钥/协议版本
-python scripts/dh.py tools                      # 列出 46 个工具（按域分组）
+python scripts/dh.py tools                      # 列出 58 个工具（按域分组）
 
 # ② 我是谁、能干什么
 python scripts/dh.py call meta.whoami
@@ -130,7 +130,7 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 
 ---
 
-## 4. 工具地图（46 个：43 业务 + 3 meta）
+## 4. 工具地图（58 个：55 业务 + 3 meta）
 
 > 全量入参/返回/坑 → `references/02-tool-catalog.md`；机器可读清单 → `tools/manifest.json`。
 > 命名规律：`域.对象.动作`；风险等级 🟢read / 🟡write / 🟠ops / 🔴destructive。
@@ -144,13 +144,37 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 | **strategy 写**（6） | `create` `copy` `update` `source.update` `target.update` `config.rollback` |
 | **strategy 生命周期**（5） | `start` `stop` `online` `offline` `checkList` |
 | **strategy 数据/清理**（6） | `data.import` `data.setStatus` `dbResetStatus` `data.clean` `queue.clean` `data.cleanAll` |
+| **mapping 静态映射**（12） | 分类 `category.list/get/create/update/delete` · 关系 `relation.list/create/update/delete/import` · `resolve` `usage` |
 | **script**（6） | `list` `get` `validate` `create` `write` `delete` |
 | **audit**（1） | `search` |
 
-**只有 5 个是"不可逆"的**：`data.clean`、`queue.clean`、`data.cleanAll`、`script.delete`、`data.setStatus`（会把数据打回重跑）。其余都能回滚或重跑。
+**只有 6 个是"不可逆"的**：`data.clean`、`queue.clean`、`data.cleanAll`、`script.delete`、`data.setStatus`、`mapping.category.delete`（连带删全部对照关系）。其余都能回滚或重跑。
 
 **2026-10-28 新增的 7 个**：`strategy.queue.job.get/run/update`、`strategy.log.search`、`script.validate`、`asset.connector.list/get`。
 它们解决的是"看得见 / 跑得动 / 改得了"：读任务参数、手工消费、改参重跑、读日志正文、脚本自检、连接器详情。
+
+**v2.1.0 新增的 12 个 `mapping.*`**：静态映射是"值翻译表"（一个源值 → 一个目标值，`*` 行做兜底）。
+两系统对接时 `1/2/0` → `男/女/未知`、`发票类型` → 金蝶编码，几乎每个方案都会用到。详见 §4.1。
+
+### 4.1 静态映射怎么用（一句话 + 三个必须知道的坑）
+
+标准动作：`mapping.category.create` → `mapping.relation.import` 批量灌对照 →
+把返回的 `categoryId` 挂到字段的 `mapping.target` → `mapping.resolve` 单值试算 →
+`mapping.usage` 反查"到底哪些方案在用"。
+
+挂载形态（写在 `meta_data.request[]` / `response[]` 的字段项上）：
+
+```json
+{ "field": "FName", "value": "{{FName}}", "mapping": { "target": "<categoryId>", "direction": "positive" } }
+```
+
+| 坑 | 现象 | 处置 |
+|---|---|---|
+| **未命中不报错** | "映射配了但没生效" | 没有精确行且无 `a_value="*"` 兜底行时，平台**原值直通**；用 `mapping.resolve` 看 `matched` |
+| **生效位置不对称** | 源端字段挂了映射没反应 | 目标端（Execute）顶层字段生效；源端（Query）**只有 object/array 子项**生效，顶层标量不生效 |
+| **删分类连带删表** | 删完方案开始输出原值 | 仍被引用时工具直接拒绝（`mapping_category_in_use`），要删必须显式 `force=true` |
+
+反向翻译（目标值 → 源值）用 `direction: "reverse"`；同一分类两个方向共用一张表（`a_value` ↔ `b_value`）。
 
 ---
 
@@ -201,7 +225,7 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 | 端点 | `https://mcp.qeasy.cloud/api/mcp` | 租户实例 `/api/mcp` |
 | 状态 | **无状态**（每请求自带 Key，GET/DELETE 405） | 有状态（`Mcp-Session-Id`） |
 | 认证 | `qk_live_…`（Agent 可 PoW 自助注册，20 次/天 public） | `sh-…`（租户开放中心签发） |
-| 工具 | `knowledge_domains` / `knowledge_search` / `knowledge_fetch` | 46 个运维/实施工具 |
+| 工具 | `knowledge_domains` / `knowledge_search` / `knowledge_fetch` | 58 个运维/实施工具 |
 | 用途 | **设计期**：字段怎么填、增量口径、失败模式、客户案例 | **落地期**：读配置、改配置、跑任务、验结果 |
 
 **推荐用法**：先用知识 MCP 查"金蝶客户写入要哪些字段/什么 parser"，再回 Datahub MCP 改映射；报告里引用返回的 `citation`（形如 `docs/knowledge/objects/…/BD_Customer.write.md`）作为证据。
@@ -246,7 +270,7 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 
 ## 10. 版本与兼容
 
-- 本 SKILL `2.0.0` 对应服务端 `datahub-mcp 0.1.0` / `x-capability-version 2026-10-28`（46 工具）。
+- 本 SKILL `2.1.0` 对应服务端 `datahub-mcp 0.1.0` / `x-capability-version 2026-10-28`（58 工具）。
 - 服务端能力升级后：`python scripts/dh.py manifest > tools/manifest.json` 重新生成清单，
   再跑 `python scripts/validate_skill.py` 校验文档与工具是否仍然一致（CI 同款）。
 - 兼容性说明（无状态 MCP 客户端、只读档位、旧版 39 工具的差异）→ `docs/clients.md` §兼容矩阵。
