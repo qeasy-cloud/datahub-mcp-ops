@@ -107,8 +107,26 @@ git push -u origin main
 gh repo edit qeasy-cloud/datahub-mcp-ops --add-topic mcp,model-context-protocol,ai-agents,agent-skills,datahub,qeasy,ipaas,integration-platform,kingdee,erp-integration,runbook,diagnostics,python,automation,devops
 ```
 
-Tagging triggers `.github/workflows/validate.yml`, which validates and attaches
-`datahub-mcp-ops-v2.0.0.zip`.
+Tagging triggers `.github/workflows/validate.yml` (validation + archive artifact) **and**
+`.github/workflows/release.yml`, which publishes the GitHub Release using `docs/release-notes/<tag>.md`
+and attaches `datahub-mcp-ops-<tag>.zip`. No personal access token is needed for that step.
+
+If a release already exists, the workflow only refreshes the asset (`--clobber`), so re-running is safe.
+
+## 3.1 One-command repository configuration
+
+Everything the web UI asks for can be applied through the API, idempotently:
+
+```bash
+export GITHUB_TOKEN=...        # classic PAT with `repo` (or `public_repo`) + admin on this repo
+python scripts/configure_github.py --dry-run    # see what would change
+python scripts/configure_github.py              # apply: visibility, About, topics, features,
+                                                # vuln reporting, labels, branch protection,
+                                                # close bogus dependabot PRs, publish release
+```
+
+`--only visibility,about,topics` applies a subset. Every step prints `ok` or `!!` and the script exits
+non-zero if any step failed (usually a token-permission problem).
 
 ---
 

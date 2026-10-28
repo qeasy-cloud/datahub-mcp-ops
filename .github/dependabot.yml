@@ -1,16 +1,22 @@
 version: 2
 
 updates:
-  # Keep GitHub Actions pinned versions current.
+  # GitHub Actions are pinned deliberately. Dependabot's registry currently
+  # proposes non-existent majors (checkout@v7 etc.), so only allow
+  # minor/patch bumps for actions.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
     commit-message:
       prefix: "chore(ci)"
     labels:
       - docs
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
 
   # The scripts use the standard library only; this stays quiet unless a
   # dev-only requirement file is ever added.

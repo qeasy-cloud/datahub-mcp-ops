@@ -58,6 +58,16 @@ The v1.x line documented 39 tools and had no daemon-free debug loop.
 
 - 文档里"`strategy.get` 总是返回完整元数据"的过时描述。
 - Windows 下内联 JSON 被 shell 吞引号、控制台中文乱码两类可用性问题。
+- Dependabot 会提出**不存在的** action 大版本（`checkout@v7` / `setup-python@v7` /
+  `upload-artifact@v7`，实际为 v4/v5/v4）。现已在 `.github/dependabot.yml` 中忽略
+  `semver-major`，并提供 `scripts/configure_github.py` 一键关闭这类 PR。
+
+### Tooling
+
+- `.github/workflows/release.yml`：打 tag 即用仓库自带的 `GITHUB_TOKEN` 发布 Release 并附 zip
+  （无需 PAT），说明来自 `docs/release-notes/<tag>.md`。
+- `scripts/configure_github.py`：可见性/About/topics/features/漏洞上报/labels/分支保护/
+  关闭无效 PR/发布 Release，一条命令、幂等、支持 `--dry-run`。
 
 ## [1.2.0] - 2026-10-26
 

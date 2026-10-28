@@ -52,6 +52,7 @@ REQUIRED_FILES = [
     "scripts/dh.py",
     "scripts/validate_skill.py",
     "scripts/smoke_test.py",
+    "scripts/configure_github.py",
     "tools/manifest.json",
     "tools/manifest.schema.json",
     "tools/mcp-config.example.json",
@@ -59,10 +60,12 @@ REQUIRED_FILES = [
     "docs/architecture.md",
     "docs/faq.md",
     "docs/releasing.md",
+    "docs/release-notes/v2.0.0.md",
     "docs/assets/banner.svg",
     ".github/CODEOWNERS",
     ".github/dependabot.yml",
     ".github/workflows/validate.yml",
+    ".github/workflows/release.yml",
 ]
 
 SKILL_DIRS = ("references/", "playbooks/", "examples/", "scripts/", "tools/", "docs/", "templates/")
