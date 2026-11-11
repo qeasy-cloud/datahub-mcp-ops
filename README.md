@@ -9,9 +9,10 @@
 Debug jobs without a daemon · repair field mappings · verify writes · diagnose failures · clean up safely
 
 [![validate](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml/badge.svg)](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-2.1.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-2.2.0-blue)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![tools](https://img.shields.io/badge/MCP_tools-58-informational)](tools/manifest.json)
+[![knowledge MCP](https://img.shields.io/badge/knowledge_MCP_tools-4-informational)](references/09-knowledge-ref.md)
 [![python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](scripts/dh.py)
 [![MCP](https://img.shields.io/badge/MCP-2025--06--18-6E56CF)](docs/clients.md)
 
@@ -48,12 +49,14 @@ It is written for agents first (progressive disclosure) and remains readable for
 
 | | |
 |---|---|
-| **8 references** | Platform mechanics, all 58 tools, debug loop, write recipe, diagnostics, knowledge MCP, security, anti-patterns |
+| **10 references** | Platform mechanics, all 58 tools, debug loop, write recipe, diagnostics, knowledge MCP, REF (history reference), security, anti-patterns, script patterns |
 | **4 playbooks** | Source-side bring-up · target-side real write · requirement-to-production · batch ops & cleanup |
 | **2 worked examples** | Copy-paste prompts · a real (redacted) debug session with actual responses |
 | **Zero-dependency CLI** | `scripts/dh.py` — `doctor` / `tools` / `call` / `manifest` / `raw`, Python 3.9+ stdlib only |
 | **Quality gates** | Offline validator, live read-only smoke test, and a manifest generated from the server itself |
 | **58 tools covered** | Including the seven that make daemon-free debugging possible |
+| **Reference-first (new)** | `knowledge_reference` cards → `knowledge_fetch` template → adapt → `copy`/`patch`; empty-result ladder built in |
+| **Modify-first** | `strategy.patch` (capability ≥ 2026-11-11) and `update/source.update/target.update` fallbacks — no more "create a new strategy to change a field" |
 
 ---
 
@@ -73,6 +76,14 @@ python scripts/dh.py tools          # 58 tools, grouped by domain
 python scripts/dh.py call meta.whoami
 python scripts/dh.py call strategy.dbInfo --param strategyId=<STRATEGY_ID>
 ```
+
+> **Team/enterprise use**: the `dh.py` examples are the shortest path for personal setups.
+> In team delivery, calls go through a managed entry (`qeasy_mcp.py … --project <project>`, write reasons required);
+> `DH_MCP_*` direct connections are disallowed. Replacement table: [`docs/team-binding.md`](docs/team-binding.md).
+>
+> **Reference-first**: the knowledge MCP (separate endpoint/key) exposes `knowledge_reference` — find running strategies
+> for the same platform pair/object, then `knowledge_fetch` their template. It is step 0 of any new integration:
+> [`references/09-knowledge-ref.md`](references/09-knowledge-ref.md).
 
 > `--param` avoids shell quoting problems on Windows; `--args @args.json` handles nested payloads.
 > Python 3.9+ with no third-party packages. Legacy env names (`DATAHUB_MCP_URL` / `DATAHUB_MCP_TOKEN`) still work.
@@ -104,7 +115,7 @@ Copy this directory into your agent's skills path and point the agent at [`SKILL
 | Cursor / VS Code / Cline | No skill install needed — register the MCP server; add `SKILL.md` to project rules if desired |
 | Codex / custom agents | Reference `SKILL.md` from `AGENTS.md` and register the MCP server |
 
-The agent reads `SKILL.md` (≈9.7k characters) first, then opens exactly one reference on demand.
+The agent reads `SKILL.md` (≈29k characters, ~420 lines) first, then opens exactly one reference on demand.
 
 ---
 
@@ -127,6 +138,9 @@ runtime chain
 
 Three identifiers: `strategyId` (UUID), `jobId` (24-hex), `dataId` (ObjectId).
 Three states that are **not** interchangeable: strategy `status`, `is_online`, and data/queue `status`.
+
+**Reference layer (not a fourth metadata layer)**: running-strategy cards from the knowledge MCP (`knowledge_reference`)
+→ copyable template `meta_data` → adapt → land in *your* tenant. It is the default starting point for any new object.
 
 Full mechanics — metadata layers, `{{}}` evaluation, parsers, pagination, idempotency, event scripts — are distilled into
 [`references/01-platform-model.md`](references/01-platform-model.md) so agents do **not** need a knowledge lookup for the basics.
@@ -185,8 +199,29 @@ Step-by-step: [`playbooks/p1-debug-source.md`](playbooks/p1-debug-source.md) →
 
 Five of them are **irreversible** (`data.clean`, `queue.clean`, `data.cleanAll`, `script.delete`, `data.setStatus`),
 plus `mapping.category.delete` which also removes every value pair it owns.
+
+> **New in 2.2**: `strategy.patch` (server capability ≥ `2026-11-11`) modifies an existing strategy by virtual-document
+> path — RFC7386 merge semantics, array replace, `dryRun`, backup/rollback. On older servers use
+> `update` / `source.update` / `target.update`, which remain as equivalent syntax sugar. See
+> [`references/02-tool-catalog.md`](references/02-tool-catalog.md) §5 and `SKILL.md` §10 for the compatibility matrix.
 Full contracts, arguments, return shapes and gotchas: [`references/02-tool-catalog.md`](references/02-tool-catalog.md).
 Machine-readable snapshot: [`tools/manifest.json`](tools/manifest.json).
+
+### Reference-first (new in 2.2)
+
+The platform has thousands of **running** strategies. Before configuring anything from scratch:
+
+```text
+knowledge_reference (platform pair + object/interface/query)
+   → read quality signals (active, errorRate, finished, evidenceGrade, runningCount)
+   → knowledge_fetch(templateCitation)      # clean template with source+target meta_data
+   → adapt 9 checks (platform pair / object / effect / adapter shell / pagination / field contract / masking / scripts / diff)
+   → strategy.copy (preferred) or strategy.create (last resort) → patch/update → verify
+```
+
+Empty result is **not** a failure: switch identifiers → relax dimensions → tenant-local `strategy.list` → asset snapshot,
+and record "query + 0 refs + fallback path". Known measured pitfalls (target-side `interface` filter, upstream-code
+normalization, `sortBy`, missing `gaps`) are documented in [`references/09-knowledge-ref.md`](references/09-knowledge-ref.md) §6.
 
 ### Static value mapping (the everyday case)
 
@@ -241,6 +276,7 @@ DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 58   #
 ```
 
 - `tools/manifest.json` is **generated from the server**, not hand-written; CI fails if a documented tool does not exist.
+- `strategy.patch` is documented ahead of the server release: regenerate the manifest with `dh.py manifest` once the server ships capability `2026-11-11` (do not hand-edit the tool list).
 - CI also compiles every script, validates the manifest against its JSON Schema, and (non-blocking) lints Markdown.
 - Nothing in CI needs a live tenant: the suite is deterministic and offline.
 
@@ -249,26 +285,28 @@ DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 58   #
 ## Repository layout
 
 ```
-SKILL.md                    agent entry point (progressive disclosure, ~250 lines)
-references/                 8 deep dives: mechanics · tools · debug · write · diagnostics · knowledge · security · anti-patterns
+SKILL.md                    agent entry point (progressive disclosure, ~420 lines)
+references/                 10 deep dives: mechanics · tools · debug · write · diagnostics · knowledge · REF · security · anti-patterns · script patterns
 playbooks/                  4 runnable scenarios
 examples/                   prompts + a real debug transcript
 scripts/                    dh.py (CLI) · validate_skill.py (offline) · smoke_test.py (live)
 tools/                      manifest.json (generated) · schema · client config
 templates/                  blueprint · report · field-mapping sample · 58-tool acceptance matrix
-docs/                       architecture · clients · FAQ · releasing · assets
+docs/                       architecture · clients · FAQ · releasing · team-binding · assets
 .github/                    CI · issue & PR templates · CODEOWNERS
 ```
 
-Documentation map and reading paths: [`SKILL.md`](SKILL.md) §9.
+Documentation map and reading paths: [`SKILL.md`](SKILL.md) §11.
 
 ---
 
 ## Roadmap
 
 - [x] v2.0.0 — daemon-free debug loop, 7 new tools, blast-radius circuit breaker, platform mechanics digest
-- [ ] v2.1 — 58-tool acceptance matrix run as a release gate; target-side live verification recipe
-- [ ] v2.2 — error catalogue expansion per platform (Kingdee → Wangdian/Purchase-Cloud)
+- [x] v2.1 — static value mapping (12 tools), 58-tool acceptance matrix, diagnostics expansion
+- [x] v2.2 — **reference-first** (`knowledge_reference` → template → adapt), **modify-first** (`strategy.patch` compatibility),
+      field-contract/label/detail-row/time-parameter checkpoints, script policy (output code only), team execution binding
+- [ ] v2.3 — error catalogue expansion per platform (Kingdee → Wangdian/Purchase-Cloud); REF coverage gaps telemetry
 - [ ] v3.0 — scenario library (multi-strategy orchestration, reconciliation patterns)
 
 See [`CHANGELOG.md`](CHANGELOG.md) for what shipped and why.

@@ -4,9 +4,10 @@ title: "Datahub MCP Ops Skill"
 abstract: >-
   An executable, agent-facing playbook for operating and implementing integrations on
   Datahub (轻易云) through its MCP endpoint: daemon-free job debugging, field-mapping
-  repair, target-write verification, diagnostics and safe cleanup.
-version: 2.1.0
-date-released: "2026-10-28"
+  repair, target-write verification, diagnostics and safe cleanup. Reference-first by default:
+  find running historical strategies (REF cards) and adapt their templates before configuring.
+version: 2.2.0
+date-released: "2026-11-11"
 license: MIT
 url: "https://github.com/qeasy-cloud/datahub-mcp-ops"
 repository-code: "https://github.com/qeasy-cloud/datahub-mcp-ops"
@@ -29,4 +30,4 @@ references:
   - type: software
     title: "Datahub MCP server (datahub-mcp 0.1.0)"
     version: "0.1.0"
-    notes: "Server-side capability version 2026-10-28, 46 tools."
+    notes: "Server-side capability version 2026-11-11 (58 tools + strategy.patch); knowledge MCP exposes 4 tools."

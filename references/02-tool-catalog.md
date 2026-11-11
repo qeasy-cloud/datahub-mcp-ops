@@ -1,6 +1,9 @@
 # 02 · Tool 目录（58 个：55 业务 + 3 meta）
 
-> 机器可读清单：`../tools/manifest.json`（由服务端代码生成，CI 校验文档一致性）。
+> 机器可读清单：`../tools/manifest.json`（由 `scripts/dh.py manifest` 抓 live server 生成，CI 校验文档一致性）。
+>
+> **新方案先抄在跑方案（REF）**：本目录只讲工具契约；"选哪个配置/别人怎么配"先走
+> `knowledge_reference` → `knowledge_fetch(templateCitation)`（见 `09-knowledge-ref.md`）。
 > 命名：`域.对象.动作`。风险：🟢 `read` / 🟡 `write` / 🟠 `ops` / 🔴 `destructive`。
 > **"需确认"列**：✅ 表示该工具受二次确认机制约束（信任级别为 `confirm`/`guarded` 时，或影响面超阈值时，
 > 首次调用只返回 `precheck` + `confirmationToken`，需带令牌二次调用）。
@@ -150,11 +153,14 @@
 | `strategy.source.update` | 改源端元数据 | 写前自动备份 → 返回 `backup.historyId`/`md5`；`metaData`（整体）与 `patch`（浅合并）二选一 |
 | `strategy.target.update` | 改目标端元数据 | 同上；**字段映射改这里** |
 | `strategy.config.rollback` | 回滚到历史快照 | 需 `historyId` + `md5`；回滚前会再给当前配置打一份快照（回滚也可回滚） |
-| `strategy.create` | 按蓝图新建方案 | `source` 必须 `effect=QUERY`、`target` 必须 `effect=EXECUTE`；不给 `metaData` 时自动套用接口资产默认快照；`dryRun` 可预演 |
-| `strategy.copy` | 复制方案（含源/目标元数据与脚本） | 单次 ≤10；默认不启动、保留 `lastSync`、副本为停止且未上线；`dryRun` 只返回计划 |
+| `strategy.create` | 按蓝图新建方案（**最后手段**） | `source` 必须 `effect=QUERY`、`target` 必须 `effect=EXECUTE`；不给 `metaData` 时自动套用接口资产默认快照；**传了也可能被平台覆盖**（实测 response 17→73、分页字段重复）；`dryRun` 可预演；**不复制事件脚本** |
+| `strategy.copy` | 复制方案（含源/目标元数据与**既有**事件脚本） | 单次 ≤10；默认不启动、保留 `lastSync`、副本为停止且未上线；`dryRun` 只返回计划 |
+| `strategy.patch`（新增，服务端 capability ≥ `2026-11-11`） | **修改已有方案**：按虚拟文档路径改 basic/dispatch/engine/source/target | RFC7386 语义（对象深合并、**数组整替**、`null` 删除）+ 少量 JSON Pointer `ops`；`dryRun`、写前备份、回滚句柄、完整错误码表（新增错误码 + 复用既有错误码）；`update`/`source.update`/`target.update` 保留为等价语法糖 |
 
-> **首选姿势**：`strategy.copy` 复制成熟方案 → 在副本上 `strategy.update`/`source.update`/`target.update` →
-> `checkList` → `online`。比 `strategy.create` 从空白配 200 个字段稳得多（见 `01-platform-model.md` §8）。
+> **首选姿势**：`copy`/`patch`，不要 `create` 从空白配 200 个字段（见 `01-platform-model.md` §8）。
+> 顺序：REF 模板/租户内样板 → `strategy.copy`（或 `patch` 现有方案）→ 改 → `checkList` → `online`。
+> 兼容矩阵：旧服务端（capability ≤ `2026-10-28`）没有 `strategy.patch`，用 `update`/`source.update`/`target.update` 等价改写；
+> 新版（≥ `2026-11-11`）优先 `strategy.patch`（一次调用 + dryRun + 回滚句柄）。
 
 ---
 
@@ -275,7 +281,9 @@ strategy.dispatchTarget → queue.job.get {rawParams:true} → 报文里看到�
 | 定位真实失败原因 | `exception.search` + `log.search {level:"error,fatal"}` |
 | 改字段映射 | `strategy.target.update`（先 `showConfig`） |
 | 回滚配置 | `strategy.config.rollback` |
+| 抄在跑方案（新方案第一步） | `knowledge_reference` → `knowledge_fetch(templateCitation)` → 适配 |
 | 新方案（推荐） | `strategy.copy` → 改 → `checkList` → `online` |
+| 改已有方案 | `strategy.patch`（capability ≥ 2026-11-11，依次 `showConfig`→`patch`→`showConfig` 复核） |
 | 重推错误数据 | `data.setStatus {status:"await"}` → `dispatchTarget` → `queue.job.run` |
 | 查谁改了什么 | `audit.search {payload:"full"}` |
 | 值翻译 / 静态映射 | `mapping.category.list` → `mapping.relation.import` → `mapping.resolve` |

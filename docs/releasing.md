@@ -135,7 +135,7 @@ non-zero if any step failed (usually a token-permission problem).
 ```markdown
 ## vX.Y.Z — YYYY-MM-DD
 
-**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-10-28 / 46 tools
+**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-11-11 / 58 tools (+ `strategy.patch`)
 
 ### Highlights
 - <one line per user-visible change>
@@ -149,34 +149,33 @@ non-zero if any step failed (usually a token-permission problem).
 - <what breaks, what to do>   (link docs/clients.md §4.3 when relevant)
 
 ### Verification
-- `validate_skill.py` — 10 checks
-- `smoke_test.py` — 8 checks against a read-only tenant
+- `validate_skill.py` — 11 checks
+- `smoke_test.py` — 8 checks against a read-only tenant (58 tools)
 - `--filter Mcp` unit suite — 274 tests (server side)
 ```
 
-### v2.0.0 release notes (ready to paste)
+### v2.2.0 release notes (ready to paste)
+
+> 完整版本写在 [`docs/release-notes/v2.2.0.md`](release-notes/v2.2.0.md)；发布时把该文件内容粘贴到
+> GitHub Release（`release.yml` 会自动读取 `docs/release-notes/<tag>.md`）。摘要：
 
 ```markdown
-## v2.0.0 — 2026-10-28
+## v2.2.0 — 2026-11-11
 
-**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-10-28 / 46 tools
+**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-11-11 / 58 tools (+ `strategy.patch`)
+knowledge MCP: 4 tools
 
 ### Highlights
-- Daemon-free debug loop: dispatch → read job → consume → patch params → re-run
-- 7 new tools documented: queue.job.get/run/update, log.search, script.validate, connector.list/get
-- Platform mechanics distilled into the repo (fewer knowledge lookups)
-- Safety: dryRun preview, blast-radius circuit breaker, one-shot confirmation token, confirmWrite gate
-
-### Changed
-- `strategy.get` now defaults to `sections=basic`; pass `sections=source|target|all` for full metadata
-- `dispatchSource/Target` work on stopped strategies (`requireRunning=true` restores the old behaviour)
-- Destructive tools always return `precheck`; >1000 rows forces a token even for `trust=full`
-- Debug breadcrumbs are logged as `debug`, not `fatal`; `dbInfo` exposes `log.debug`
+- Reference-first: knowledge_reference cards → template → adapt → copy/patch
+- Modify-first: strategy.patch (server ≥ 2026-11-11) replaces "create a new strategy to change a field"
+- Checkpoints: create-overwrite/scripts, field contract, detail rows, Chinese labels, time-parameter minimum
+- Script policy: agents output code only; copy keeps existing scripts
+- Team execution binding: dh.py → qeasy_mcp.py replacement table, no DH_MCP_* direct calls
 
 ### Verification
-- validate_skill.py — 10 checks
-- smoke_test.py — 8 checks (46 tools, read-only)
-- Real debug session recorded in examples/session-source-debug.md
+- validate_skill.py — 11 checks
+- smoke_test.py — 8 checks (58 tools, read-only)
+- grep knowledge_reference — > 0 across SKILL/references/playbooks/examples/docs
 ```
 
 ---
@@ -188,6 +187,6 @@ non-zero if any step failed (usually a token-permission problem).
 - [ ] Issues/Discussions on, Wiki off
 - [ ] Branch protection requires `validate`
 - [ ] Private vulnerability reporting on
-- [ ] `v2.0.0` release published with notes above
+- [ ] `vX.Y.Z` release published with notes from `docs/release-notes/<tag>.md`
 - [ ] Repository added to the org profile README
 - [ ] Link from `https://www.qeasy.cloud/mcp` back to this repository

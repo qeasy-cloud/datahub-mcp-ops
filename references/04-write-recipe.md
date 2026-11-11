@@ -11,14 +11,19 @@
 ## 1. 五步配方（按顺序做，别跳）
 
 ```
-① 选接口     asset.api.list {platformId, effect:"EXECUTE"}       ← 写入接口
-② 读模板     asset.api.get  {apiId, includeFields:true}           ← 必填字段 + FormId
-③ 看现状     strategy.showConfig {strategyId, direction:"target"} ← 当前 meta_data
-④ 改映射     strategy.target.update {patch:{…}}                   ← 只改要改的部分
-⑤ 闭环验证   dispatchTarget → queue.job.get → queue.job.run {confirmWrite:true} → 回查
+① 找参照     knowledge_reference → knowledge_fetch(templateCitation)  ← 同平台同对象在跑方案的 meta_data
+   （空结果：租户内 strategy.list 同对象在跑方案 → 最后才用资产默认快照；见 09-knowledge-ref.md）
+② 选接口     asset.api.list {platformId, effect:"EXECUTE"}             ← 只解析 apiId/FormId/字段事实
+             asset.api.get  {apiId, includeFields:true}                ← 必填字段 + 字段类型
+③ 看现状     strategy.showConfig {strategyId, direction:"target"}      ← 当前 meta_data
+④ 改映射     strategy.patch（capability ≥ 2026-11-11）或 target.update {patch:{…}}  ← 只改要改的部分
+⑤ 闭环验证   dispatchTarget → queue.job.get → queue.job.run {confirmWrite:true} → 外系统回查
 ```
 
-> 第 ①–② 步用知识 MCP 补充"这个对象到底要哪些字段"更快（见 `06-knowledge-mcp.md`），
+> **修改优先**：已有方案改字段用 `strategy.patch`（一次调用、dryRun、自动备份回滚）；旧服务端用
+> `target.update` 的 `patch`（浅合并）。**不要用 `create` 一个新方案来代替"改一个方案"**。
+> 字段范围以**蓝图/字段契约 `field-contract.json` 为上限**；资产字段目录只作候选（见 §2.2）。
+> 第 ②步用知识 MCP 补充"这个对象到底要哪些字段"更快（见 `06-knowledge-mcp.md`），
 > 但**以租户实际接口资产为准**（不同版本/二开字段不同）。
 
 ---
@@ -57,13 +62,16 @@
 }
 ```
 
-### 2.1 三个必须记住的规则
+### 2.1 六个必须记住的规则
 
 | 规则 | 说明 |
 |---|---|
 | **`{{}}` vs 裸名** | `"{{FBillNo}}"` 取值；`"FBillNo"` 是常量（撞上系统变量名还会被替换） |
 | **基础资料必带 parser** | 组织/客户/物料/币别等字段：`ConvertObjectParser` + `params=FNumber`（或对方要求的编码类型） |
-| **明细是"别名"** | 金蝶主子表用 `"FSaleOrderEntry": "_Flist"`（把数据里的明细数组挂上去），不是逐行映射 |
+| **明细容器 = 裸数组名** | 金蝶主子表用 `"FSaleOrderEntry": "_Flist"`（把数据里的明细数组挂上去；**不带 `{{ }}`**），不是逐行映射 |
+| **明细子字段 = `{{数组名.子字段}}`** | 子字段必须带源数组名前缀（如 `{{details.FQty}}`）；容器名与子字段前缀不一致 = **明细静默丢失** |
+| **每字段补中文 `label`** | `request[]`/`response[]` 每个字段补中文业务名（资产没有就翻译）；排障与交接都依赖它 |
+| **时间参数最小集** | 只留一组增量水位成对参数（`modified_start/end` 或 `start/end`）+ 回看窗口；不要把 created/modified/多个时间字段全塞进请求 |
 
 ### 2.2 `otherResponse` 位置槽（缺就报"其它响应参数没有定义接口状态参数"）
 
@@ -156,8 +164,12 @@ dh call strategy.config.rollback --args '{
 - [ ] `otherRequest` 里有 `FormId`（金蝶）/ 目标系统要求的对象标识
 - [ ] 每个 `request[].value` 都是 `{{}}` 或明确常量，**没有裸字段名**
 - [ ] 基础资料字段都带 `ConvertObjectParser`
+- [ ] 目标字段集合 ⊆ 蓝图/字段契约（`field-contract.json`），超出项已登记
+- [ ] 明细用**裸数组名容器**，子字段带 `{{数组名.子字段}}` 前缀（前缀与容器一致）
+- [ ] 每个字段有中文 `label`；时间参数只留增量水位成对参数
 - [ ] 明细用别名（`_Flist` 等），不是逐行
 - [ ] `operation` 与 `rowsKey` 匹配（批量写入时）
 - [ ] `otherResponse` ≥2 项且路径正确
 - [ ] `id`/`number` 指向真实业务键
+- [ ] 修改走 `patch`/`target.update`，没有为"改一个字段"新建方案
 - [ ] 跑一次成功 + 回查一致 + 重跑变 `repeat`

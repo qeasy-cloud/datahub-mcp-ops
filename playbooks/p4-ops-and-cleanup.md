@@ -132,17 +132,24 @@ dh call strategy.dbInfo --args '{"strategyId":"<SID>"}'
 
 ---
 
-## 4. 脚本资产维护
+## 4. 脚本资产：只读核对 + 只输出代码
+
+**政策（2026-11-11）**：SaaS 从 MCP 可见面移除 `script.create/write/delete`（保留 `list/get/validate`）；
+Agent **不保存/不部署**脚本，只输出代码与保存步骤，由人操作。`strategy.copy` 复制既有脚本是平台行为，保留。
 
 ```bash
+# 只读：盘点与核对
 dh call script.list --args '{"strategyId":"<SID>"}'
+dh call script.get  --args '{"strategyId":"<SID>","scriptId":"…"}'
+
+# 只校验：Agent 输出代码后先自检（无副作用）
 dh call script.validate --args '{"script":"<?php …"}'
-dh call script.get   --args '{"strategyId":"<SID>","scriptId":"…"}'
 ```
 
-- 改脚本前先 `get` 读现状；`write` 会自动备份（返回 `backup`）。
 - **只改真正会触发的事件**（14 个里只有 5 个）——见 `../references/01-platform-model.md` §7。
-- 删除脚本要求方案未上线未运行，且备份失败会中止。
+- `strategy.copy` 会复制既有脚本；`strategy.create` **不会** → create 后必须 `script.list` 对照。
+- 需要新增/修改脚本：按 `../references/10-script-patterns.md` 输出「事件选择 + 代码 + validate 证据 + 保存步骤 + 验证计划」，交人执行。
+- 删除脚本不由 Agent 做（不可逆且需人工核对）。
 
 ---
 

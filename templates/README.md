@@ -36,7 +36,7 @@ python scripts/dh.py call asset.api.get --param apiId=<API_ID> --param includeFi
 
 ## `tool-test-matrix.md` — 新部署验收矩阵
 
-46 个 Tool 的正例表 + 11 条负例。由 `tools/manifest.json` 生成；
+58 个 Tool 的正例表 + 11 条负例。由 `tools/manifest.json` 生成；
 服务端升级后重新生成再验。
 
 用法：每个 Tool 至少成功调一次；破坏性类只在自己的临时方案上做；负例必须全过。

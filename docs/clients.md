@@ -67,7 +67,7 @@ POST tools/list
 POST tools/call {"name":"…","arguments":{…}}
 ```
 
-> 公开知识 MCP 是**另一套**：`https://mcp.qeasy.cloud/api/mcp`，无状态（GET/DELETE → 405），
+> 公开知识 MCP 是**另一套**：`https://www.qeasy.cloud/api/mcp`（备用 `mcp.qeasy.cloud`），无状态（GET/DELETE → 405），
 > 每请求自带 `qk_live_…`，工具只有 3 个。别把两者混用。
 
 ---
@@ -97,10 +97,13 @@ POST tools/call {"name":"…","arguments":{…}}
 |---|---|---|---|
 | `2026-10-26` | 39 | 无 `queue.job.*` / `log.search` / `script.validate` / `connector.*` | v1.x（已归档） |
 | `2026-10-28` | 46 | 新增 7 个；`get` 默认 `basic`；dispatch 停止态放行；预演+熔断 | v2.0.0 |
-| `2026-10-28`（含静态映射） | **58** | 新增 12 个 `mapping.*`；`queue.job.get` 支持 `rawParams` | **v2.1.0（当前）** |
+| `2026-10-28`（含静态映射） | **58** | 新增 12 个 `mapping.*`；`queue.job.get` 支持 `rawParams` | v2.1.0 |
+| `2026-11-11` | **58 + `strategy.patch`** | 新增修改入口 `strategy.patch`（RFC7386/数组整替/dryRun/回滚）；脚本写能力在 SaaS 可见面移除；知识 MCP 4 工具 | **v2.2.0（当前）** |
 
-> 用 `meta.capabilities` 的 `tool_count` 快速判断服务端版本；
+> 用 `meta.capabilities` 的 `tool_count` + `x-capability-version` 判断服务端版本；
 > 与 `tools/manifest.json` 的 `capability_version` 对比即可知道文档是否过期。
+> `tools/manifest.json` 由 `python scripts/dh.py manifest` 生成；服务端发布 `2026-11-11` 后需重新生成
+> （本版文档先于该能力发布，`strategy.patch` 以兼容矩阵方式标注）。
 
 ### 4.2 只读档位下的行为
 
@@ -115,7 +118,7 @@ POST tools/call {"name":"…","arguments":{…}}
 
 ### 4.3 旧版本行为差异（升级时注意）
 
-| 行为 | 旧（≤39 工具） | 新（46 工具） |
+| 行为 | 旧（≤39 工具） | 新（58 工具 + patch） |
 |---|---|---|
 | `strategy.get` | 总是返回完整 `meta_data`（~40KB） | 默认 `sections=basic`；要全量显式传 |
 | `dispatchSource`（停止态） | `strategy_not_running` | 放行，回传 `jobId` + `mode=debug` |
@@ -123,6 +126,8 @@ POST tools/call {"name":"…","arguments":{…}}
 | 带 `confirmationToken` | `full` 档静默忽略 | 一律校验核销（重放被拒） |
 | `script.create` 返回 | `compiled:true` 不可信 | `file_written` + `syntax_ok`（落库前 `php -l`） |
 | 调试日志 | 记为 FATAL | 记为 `debug`（`dbInfo.log.debug`） |
+| `script.create/write/delete` | 可见且可调 | **SaaS 可见面移除**（保留 `list/get/validate`）；私有化由部署方开关放开（默认关） |
+| 修改已有方案 | 只有 `update`/`source.update`/`target.update` | capability ≥ `2026-11-11` 新增 `strategy.patch`（虚拟文档路径 + dryRun + 回滚） |
 
 ---
 

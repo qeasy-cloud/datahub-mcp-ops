@@ -179,3 +179,41 @@ dh call strategy.queue.job.run --args '{
 ```
 → 实测把 `FilterString` 清空后，取到 **100 行**（`Limit` 上限）。
 这就是"先改任务参数、别改元数据"的价值：30 秒验证了"是过滤条件的问题"。
+
+---
+
+## 附录：如果先做 REF（2026-11 起推荐的第一步）
+
+调试已有方案时，"和同对象在跑方案比差异"比只看自己的配置更快。真实一次调用
+（知识 MCP 的 `knowledge_reference`，用你的 MCP 客户端；下面以团队只读 CLI 形式展示）：
+
+```bash
+# 团队环境：knowledge.py ref --source-platform 领星 --target-platform 金蝶云星空 \
+#            --object SAL_OUTSTOCK --limit 3 --json
+# 其它环境：用 MCP 客户端调用 knowledge_reference，参数相同
+```
+
+返回组卡（摘要）要点：
+
+```jsonc
+{"refs":[{"citation":"docs/knowledge/reference/lingxing-to-kingdee-cloud/SAL_OUTSTOCK.md",
+          "object":"SAL_OUTSTOCK","objectType":"formId",
+          "quality":{"finished":160853,"errorRate":0.009,"active":true,"lastSyncDays":2},
+          "runningCount":8,"evidenceGrade":"A",
+          "topStrategies":["领星-发货结算报告=>金蝶云星空-销售出库单（不含日本站）","…"],
+          "templateCitation":"docs/knowledge/templates/lingxing-to-kingdee-cloud/SAL_OUTSTOCK.md"}]}
+```
+
+```text
+knowledge_fetch {"citation":"docs/knowledge/templates/lingxing-to-kingdee-cloud/SAL_OUTSTOCK.md"}
+# 大模板先落盘/分段（maxChars），不整段读入上下文
+```
+
+**判读**：
+- 质量信号好（`active`、`errorRate` 低、`finished` 大）→ 抽 2–3 张比对 `topStrategies` 是否同一业务语义；
+- 取回模板后只比**差异项**（分页三件套 / parser / 明细前缀 / 字段集），逐项解释后再改自己的方案；
+- 模板是快照不是契约：字段以租户 `asset.api.get` 为准。
+
+**如果 0 条**：先分覆盖缺口 / `accessHint`（Standard 不可见）/ 参数错误；再按降级阶梯
+（换标识符 → 放宽维度 → 租户内 `strategy.list` 同对象在跑方案 → 资产默认快照），
+并把「检索式 + 0 refs + 降级路径」写进结论。详见 `../references/09-knowledge-ref.md`。

@@ -43,15 +43,41 @@ v2 起默认 `sections=basic`（只给摘要），因为单条全量约 40KB，�
 
 ## 工具数量为什么和文档不一致？
 
-用 `meta.capabilities` 的 `tool_count` 对比。常见原因：
-① 服务端版本不同（39 / 46 / 58）；② 密钥 scope 不足；③ `read_only` 档位。
+用 `meta.capabilities` 的 `tool_count` 与 `x-capability-version` 对比。常见原因：
+① 服务端版本不同（39 / 46 / 58 / 58+patch）；② 密钥 scope 不足；③ `read_only` 档位。
 `docs/clients.md` §4 有兼容矩阵。
+
+- 本 SKILL **2.2.0** 的文档基线是 capability `2026-11-11`（58 工具 + `strategy.patch`）。
+- `tools/manifest.json` 是服务端生成物：服务端发布新版后由 `python scripts/dh.py manifest` 重新生成，
+  **不要手编工具列表**；旧 manifest 上看到的 capability 版本落后是正常的，以 `meta.capabilities` 为准。
+
+## `strategy.patch` 是什么？为什么文档里有但工具列表没有？
+
+`strategy.patch` 是 **2026-11-11 新增**的"修改已有方案"入口（按虚拟文档路径改，RFC7386 语义 + dryRun + 备份回滚），
+服务端 capability **≥ `2026-11-11`** 才可用。旧服务端没有它：用 `strategy.update` / `strategy.source.update` /
+`strategy.target.update` 等价改写（见 `references/02-tool-catalog.md` §5 兼容矩阵）。
 
 ## 两个 MCP 有什么区别？
 
-- **Datahub MCP**（租户端点）：58 个工具，读写你的真实数据，有状态。
-- **知识 MCP**（`mcp.qeasy.cloud`）：3 个工具，只读官方知识，无状态。
-前者回答"现在是什么"，后者回答"应该怎么配"。见 `references/06-knowledge-mcp.md`。
+- **Datahub MCP**（租户端点）：58 个工具（+ 新版 `strategy.patch`），读写你的真实数据，有状态。
+- **知识 MCP**（`https://www.qeasy.cloud/api/mcp`，备用 `mcp.qeasy.cloud`）：**4 个工具**
+  （`knowledge_domains` / `knowledge_search` / `knowledge_fetch` / `knowledge_reference`），只读、无租户、无状态。
+前者回答"现在是什么"，后者回答"应该怎么配、别人怎么配的"。
+新方案第一步是 `knowledge_reference` 找在跑方案（REF），见 `references/09-knowledge-ref.md`。
+
+## REF（`knowledge_reference`）返回 0 条，是不是平台没有？
+
+不一定。三种原因要分清：① 该平台对/对象没有在跑方案（覆盖缺口）；② Standard Key 看不到 restricted 组卡
+（返回空 + `accessHint`，不是 Key 失效）；③ 参数/协议问题（`-32602`/`-32029`/`429`/`401`）。
+处置按降级阶梯：换标识符 → 放宽维度 → 租户内 `strategy.list` 同对象在跑方案 → 资产默认快照，
+并记录「检索式 + 0 refs + 降级路径」。**0 命中不等于平台无覆盖，更不能编造案例。**
+详见 `references/09-knowledge-ref.md` §7。
+
+## 为什么团队场景不能直接 `export DH_MCP_URL` / `DH_MCP_KEY`？
+
+本 SKILL 的 `dh.py` 示例面向个人/实验环境。团队交付要求"项目→实例→租户"绑定、写闸门与审计，
+在线调用统一走 `python3 scripts/mcp/qeasy_mcp.py … --project <项目>`；直连会绕过绑定与审计，
+且把租户 Key 发给任意端点。命令替换表见 `docs/team-binding.md`。
 
 ## 密钥从哪来？能自助注册吗？
 
@@ -69,8 +95,9 @@ scope 不足或档位是 `read_only`。`meta.capabilities` 会给出每个工具
 
 ## 能不能删掉一个方案？
 
-不能。平台没有"删除方案"的 MCP 工具，只有 `offline`（置未上线）与清理数据/队列。
-这也是刻意的：删除方案属于平台管理动作，不应由 Agent 随手做。
+本 SKILL 2.2.0 所覆盖的 MCP 工具里**没有**"删除方案"入口，只有 `offline`（置未上线）与清理数据/队列。
+平台侧的删除默认是**软删除**（标准 API 语义），是否开放 MCP 入口另行评估；
+在此之前，删除方案仍属平台管理动作，不由 Agent 随手做。
 
 ## 能不能改连接器凭据？
 
@@ -91,6 +118,13 @@ scope 不足或档位是 `read_only`。`meta.capabilities` 会给出每个工具
 
 14 个事件里只有 **5 个**真有触发点。挂在"死事件"上不会执行、也不报错。
 详见 `references/01-platform-model.md` §7。
+
+## 能不能让 Agent 直接帮我保存/部署脚本？
+
+不能（2026-11-11 政策）：SaaS 从 MCP 可见面移除 `script.create/write/delete`（保留 `list/get/validate`），
+私有化由部署方开关放开（默认关）。Agent **只输出代码**（事件选择 + 完整 PHP + `script.validate` 证据 +
+保存步骤 + 验证计划），由人在平台保存；`strategy.copy` 复制既有脚本是平台行为，不算 Agent 新增。
+详见 `references/10-script-patterns.md`。
 
 ## 目标端脚本里 `throw` 为什么没反应？
 
