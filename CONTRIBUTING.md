@@ -11,7 +11,7 @@ Thanks for helping make Datahub integrations easier for agents and humans.
 | **平台机制修正** | 与 `references/01-platform-model.md` 冲突的新证据（附来源） |
 | **工具契约更新** | 服务端升级后 `tools/manifest.json` 与文档不一致 |
 | **反模式** | 你踩过、并且能说清"为什么错/应该怎么做"的坑 |
-| **脚本/校验改进** | `dh.py`、`validate_skill.py`、CI |
+| **脚本/校验改进** | `dh.py`、`validate_skill.py`、`sync_capability.py`、CI |
 
 不要提交：真实密钥、客户数据、内部主机名、未脱敏的 `app_secret`、整段生产日志。
 
@@ -23,8 +23,9 @@ cd datahub-mcp-ops
 
 # 1. 改动后先跑离线校验（不需要网络/密钥）
 python scripts/validate_skill.py -v
+python scripts/sync_capability.py --check --allow-stale-manifest -v   # 能力面一致性；窗口期参数何时去掉见 docs/releasing.md
 
-# 2. 若服务端能力有变化，刷新清单
+# 2. 若服务端能力有变化，刷新清单（然后去掉 --allow-stale-manifest 跑严格模式）
 python scripts/dh.py manifest > tools/manifest.json
 
 # 3. 有测试端点时跑只读冒烟

@@ -40,6 +40,13 @@ jobs:
           print("manifest ok:", manifest["tool_count"], "tools")
           PY
 
+      # 能力面校验：SKILL.md frontmatter / 知识 MCP 4 工具 / manifest 兼容矩阵 / 13 条反馈条款。
+      # v2.2.0 文档基线是服务端 capability 2026-11-11（含 strategy.patch），但 manifest 是服务端生成物，
+      # 在服务端该能力发布前仍为 2026-10-28 → 窗口期用 --allow-stale-manifest 将「manifest 落后」降级为 WARN。
+      # 服务端发布 2026-11-11 能力（并重新生成 tools/manifest.json）后，去掉该参数，恢复严格失败。
+      - name: Capability surface check (SKILL <-> manifest <-> knowledge MCP)
+        run: python scripts/sync_capability.py --check --allow-stale-manifest -v
+
       - name: Markdown lint (non-blocking)
         continue-on-error: true
         run: npx --yes markdownlint-cli2 "**/*.md" "#node_modules"
