@@ -4,6 +4,15 @@ All notable changes to this skill package are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-11-11
+
+服务端 2026-11-11 批次 2（`strategy.delete` 软删除）纳入文档基线：工具面 60（3 meta + 57 业务）；
+新增删除策略条款（confirm/dryRun/运行中拒绝/无恢复 API）。`strategy.patch` 仍为修改类默认入口。
+
+### Added
+- `references/02-tool-catalog.md`：`strategy.delete`（软删除）条目；工具总数更正为 60。
+- `SKILL.md` §10 兼容矩阵：`2026-11-11`+ 标注 60 工具 + `strategy.delete`。
+
 ## [2.2.0] - 2026-11-11
 
 Reference-first（REF：抄在跑方案）成为一等能力；修改优先（copy + patch）；执行绑定与 13 条用户反馈条款落地；

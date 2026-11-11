@@ -9,9 +9,9 @@
 Debug jobs without a daemon · repair field mappings · verify writes · diagnose failures · clean up safely
 
 [![validate](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml/badge.svg)](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-2.2.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-2.2.1-blue)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![tools](https://img.shields.io/badge/MCP_tools-58-informational)](tools/manifest.json)
+[![tools](https://img.shields.io/badge/MCP_tools-60-informational)](tools/manifest.json)
 [![knowledge MCP](https://img.shields.io/badge/knowledge_MCP_tools-4-informational)](references/09-knowledge-ref.md)
 [![python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](scripts/dh.py)
 [![MCP](https://img.shields.io/badge/MCP-2025--06--18-6E56CF)](docs/clients.md)

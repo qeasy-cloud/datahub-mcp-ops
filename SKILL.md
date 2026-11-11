@@ -3,7 +3,7 @@ name: datahub-mcp-ops
 description: Operate, debug and implement integrations on Datahub / 轻易云 (qeasy.cloud) through its MCP endpoint — reference-first and modify-first. Use when the user mentions 轻易云 / Datahub / 数据集成 / 方案 / 队列 / 字段映射 / 重推 / 巡检 / 调试 / 抄在跑方案 / REF, or provides a strategyId, jobId or 金蝶 error message and wants it understood, fixed or verified. Covers history reference (REF) cards from the knowledge MCP and template adaptation; the manual debug loop (dispatch → read queue job → consume it → patch job params → re-run) even with no daemon; copy-first / patch-first modification instead of creating new strategies; field-contract, Chinese-label, detail-row and time-parameter checkpoints; script policy (output code only); asset tools used only to resolve ids and field facts; write verification and safe cleanup.
 license: MIT
 metadata:
-  version: 2.2.0
+  version: 2.2.1
   homepage: https://github.com/qeasy-cloud/datahub-mcp-ops
   capability_version: "2026-11-11"
   min_server: datahub-mcp 0.1.0
@@ -220,7 +220,7 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 | **asset**（6，全局只读） | `platform.list` `platform.get` `connector.list` `connector.get` `api.list` `api.get` |
 | **strategy 读**（8） | `list` `get` `showConfig` `dbInfo` `queue.list` `queue.job.get` `log.search` `data.search` |
 | **strategy 调试**（5） | `dispatchSource` `dispatchTarget` `queue.job.run` `queue.job.update` `exception.search` |
-| **strategy 写**（6） | `create` `copy` `update` `source.update` `target.update` `config.rollback`（+ 服务端 capability ≥ `2026-11-11` 的 `strategy.patch`，见 §10） |
+| **strategy 写**（6） | `create` `copy` `update` `source.update` `target.update` `config.rollback`（+ 服务端 capability ≥ `2026-11-11` 的 `strategy.patch` / `strategy.delete`，见 §10） |
 | **strategy 生命周期**（5） | `start` `stop` `online` `offline` `checkList` |
 | **strategy 数据/清理**（6） | `data.import` `data.setStatus` `dbResetStatus` `data.clean` `queue.clean` `data.cleanAll` |
 | **mapping 静态映射**（12） | 分类 `category.list/get/create/update/delete` · 关系 `relation.list/create/update/delete/import` · `resolve` `usage` |
@@ -380,13 +380,13 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 
 ## 10. 版本与兼容
 
-- 本 SKILL `2.2.0`：文档基线 = Datahub MCP `datahub-mcp 0.1.0` / `x-capability-version 2026-11-11`（58 工具 + `strategy.patch`）。
+- 本 SKILL `2.2.1`：文档基线 = Datahub MCP `datahub-mcp 0.1.0` / `x-capability-version 2026-11-11`（60 工具 = 3 meta + 57 业务；含 `strategy.patch` / `strategy.delete`）。
 - **兼容矩阵**：
 
 | 服务端 capability | 本 SKILL 可用性 |
 |---|---|
 | `2026-10-28`（58 工具） | ✅ 除 `strategy.patch` 外全部可用（用 `source.update`/`target.update` 等价写法） |
-| `2026-11-11`+（58 工具 + `strategy.patch`） | ✅ 全部可用；`strategy.patch` 为修改类默认入口 |
+| `2026-11-11`+（60 工具 + `strategy.patch` / `strategy.delete`） | ✅ 全部可用；`strategy.patch` 为修改类默认入口；`strategy.delete` 仅软删除 |
 | `2026-10-26` / 39/46 工具 | ⚠️ 部分工具不存在，按 `meta.capabilities` 的实际 `tool_count` 降级 |
 
 - `tools/manifest.json` 是**服务端生成物**：本版发布前如服务端尚未部署 `2026-11-11`，

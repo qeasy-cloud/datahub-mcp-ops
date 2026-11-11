@@ -9,9 +9,9 @@
 无守护进程调试 · 修复字段映射 · 验证写入 · 定位故障 · 安全清理
 
 [![validate](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml/badge.svg)](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-2.2.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-2.2.1-blue)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![tools](https://img.shields.io/badge/MCP_tools-58-informational)](tools/manifest.json)
+[![tools](https://img.shields.io/badge/MCP_tools-60-informational)](tools/manifest.json)
 [![knowledge MCP](https://img.shields.io/badge/knowledge_MCP_tools-4-informational)](references/09-knowledge-ref.md)
 [![python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](scripts/dh.py)
 

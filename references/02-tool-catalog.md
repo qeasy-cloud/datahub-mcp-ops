@@ -1,4 +1,4 @@
-# 02 · Tool 目录（58 个：55 业务 + 3 meta）
+# 02 · Tool 目录（60 个：57 业务 + 3 meta；2026-11-11 批次含 strategy.patch / strategy.delete）
 
 > 机器可读清单：`../tools/manifest.json`（由 `scripts/dh.py manifest` 抓 live server 生成，CI 校验文档一致性）。
 >
@@ -155,6 +155,7 @@
 | `strategy.config.rollback` | 回滚到历史快照 | 需 `historyId` + `md5`；回滚前会再给当前配置打一份快照（回滚也可回滚） |
 | `strategy.create` | 按蓝图新建方案（**最后手段**） | `source` 必须 `effect=QUERY`、`target` 必须 `effect=EXECUTE`；不给 `metaData` 时自动套用接口资产默认快照；**传了也可能被平台覆盖**（实测 response 17→73、分页字段重复）；`dryRun` 可预演；**不复制事件脚本** |
 | `strategy.copy` | 复制方案（含源/目标元数据与**既有**事件脚本） | 单次 ≤10；默认不启动、保留 `lastSync`、副本为停止且未上线；`dryRun` 只返回计划 |
+| `strategy.delete` | 删除方案（**软删除**，2026-11-11 批次） | `confirm=true` 必须显式；运行中/已上线拒绝（先 stop/offline）；`dryRun` 回影响面；平台无恢复 API，谨慎；契约见服务端 `docs/MCP-OPEN/16` |
 | `strategy.patch`（新增，服务端 capability ≥ `2026-11-11`） | **修改已有方案**：按虚拟文档路径改 basic/dispatch/engine/source/target | RFC7386 语义（对象深合并、**数组整替**、`null` 删除）+ 少量 JSON Pointer `ops`；`dryRun`、写前备份、回滚句柄、完整错误码表（新增错误码 + 复用既有错误码）；`update`/`source.update`/`target.update` 保留为等价语法糖 |
 
 > **首选姿势**：`copy`/`patch`，不要 `create` 从空白配 200 个字段（见 `01-platform-model.md` §8）。
