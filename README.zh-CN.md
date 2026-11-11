@@ -9,9 +9,10 @@
 无守护进程调试 · 修复字段映射 · 验证写入 · 定位故障 · 安全清理
 
 [![validate](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml/badge.svg)](https://github.com/qeasy-cloud/datahub-mcp-ops/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-2.1.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-2.2.1-blue)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![tools](https://img.shields.io/badge/MCP_tools-58-informational)](tools/manifest.json)
+[![tools](https://img.shields.io/badge/MCP_tools-60-informational)](tools/manifest.json)
+[![knowledge MCP](https://img.shields.io/badge/knowledge_MCP_tools-4-informational)](references/09-knowledge-ref.md)
 [![python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](scripts/dh.py)
 
 [English](README.md) · **简体中文**
@@ -47,12 +48,14 @@
 
 | | |
 |---|---|
-| **8 篇 references** | 平台机制、58 个工具、调试闭环、写入配方、诊断字典、知识 MCP、安全边界、反模式 |
+| **10 篇 references** | 平台机制、58 个工具、调试闭环、写入配方、诊断字典、知识 MCP、REF（抄在跑方案）、安全边界、反模式、脚本模式 |
 | **4 个 playbooks** | 源侧跑通 · 目标端真实写入 · 从需求到上线 · 批量运维与收尾 |
 | **2 个实例** | 可直接复制的提示词 · 一次真实（脱敏）调试会话 |
 | **零依赖 CLI** | `scripts/dh.py`：`doctor`/`tools`/`call`/`manifest`/`raw`，仅需 Python 3.9+ 标准库 |
 | **质量门禁** | 离线校验器、在线只读冒烟、由服务端生成的工具清单 |
 | **覆盖 58 个工具** | 含让"无守护进程调试"成为可能的 7 个新工具 |
+| **REF 优先（新）** | `knowledge_reference` 组卡 → `knowledge_fetch` 模板 → 适配 → `copy`/`patch`；空结果降级阶梯内建 |
+| **修改优先（新）** | `strategy.patch`（capability ≥ 2026-11-11）+ `update/source.update/target.update` 回退——不再"为改一个字段新建方案" |
 
 ---
 
@@ -75,6 +78,14 @@ python scripts/dh.py call strategy.dbInfo --param strategyId=<方案ID>
 
 > Windows 下推荐 `--param`（避免 shell 吞引号），复杂结构用 `--args @args.json`。
 > 兼容 v1.x 环境变量名（`DATAHUB_MCP_URL` / `DATAHUB_MCP_TOKEN`）。
+>
+> **团队/企业场景**：上面 `dh.py` 是个人环境最短路径；团队交付的在线调用统一走受管入口
+> （`qeasy_mcp.py … --project <项目>`，写操作需四要素），**禁止** `DH_MCP_*` 直连。
+> 命令替换表见 [`docs/team-binding.md`](docs/team-binding.md)。
+>
+> **REF 优先**：知识 MCP（另一套端点/Key）提供 `knowledge_reference`——按平台对/对象找在跑方案，
+> 再 `knowledge_fetch` 取模板。它是任何新集成的第 0 步：
+> [`references/09-knowledge-ref.md`](references/09-knowledge-ref.md)。
 
 ### 2 · 接进 MCP 客户端
 
@@ -104,7 +115,7 @@ Claude Code/Desktop、Cursor、VS Code、Cline 的现成片段见 [`tools/mcp-co
 | Cursor / VS Code / Cline | 无需装技能：注册 MCP server 即可；也可把 `SKILL.md` 放进项目规则 |
 | Codex / 自研 Agent | 在 `AGENTS.md` 指向 `SKILL.md`，并注册 MCP server |
 
-Agent 先读 `SKILL.md`（约 9.7k 字符），再按需只打开**一篇** reference。
+Agent 先读 `SKILL.md`（约 29k 字符 / 约 420 行），再按需只打开**一篇** reference。
 
 ---
 
@@ -127,6 +138,9 @@ Agent 先读 `SKILL.md`（约 9.7k 字符），再按需只打开**一篇** refe
 
 三个 ID：`strategyId`（UUID）、`jobId`（24 位十六进制）、`dataId`（ObjectId）。
 三个**不可混用**的状态：方案 `status`、`is_online`、数据/队列 `status`。
+
+**参考层（不是元数据第四层）**：知识 MCP 的 `knowledge_reference` 返回「在跑方案组卡」→
+`knowledge_fetch` 取可复制模板 `meta_data` → 适配 → 落到**你自己的租户**。这是任何新对象的默认起点。
 
 完整机制（元数据三层、`{{}}` 求值、parser、分页、幂等、事件脚本）已蒸馏进
 [`references/01-platform-model.md`](references/01-platform-model.md)，基础问题**不必**再查知识 MCP。
@@ -187,6 +201,26 @@ sequenceDiagram
 以及 `mapping.category.delete`（连带删除该分类下全部对照关系）。
 完整契约与坑：[`references/02-tool-catalog.md`](references/02-tool-catalog.md)；机器可读清单：[`tools/manifest.json`](tools/manifest.json)。
 
+> **2.2 新增**：`strategy.patch`（服务端 capability ≥ `2026-11-11`）按虚拟文档路径修改已有方案——
+> RFC7386 合并语义、数组整替、`dryRun`、备份/回滚。旧服务端用 `update` / `source.update` / `target.update`
+> 等价改写。兼容矩阵见 `SKILL.md` §10 与 [`references/02-tool-catalog.md`](references/02-tool-catalog.md) §5。
+
+### REF 优先（2.2 新增）
+
+平台里有成千上万条**在跑方案**。配置任何新对象之前：
+
+```text
+knowledge_reference（平台对 + object/interface/query）
+   → 读质量信号（active、errorRate、finished、evidenceGrade、runningCount）
+   → knowledge_fetch(templateCitation)      # 取回源+目标 meta_data 模板
+   → 适配 9 项（平台对/对象/接口 effect/适配器借壳/分页增量/字段契约/脱敏/脚本 review/差异留痕）
+   → strategy.copy（首选）或 create（最后手段）→ patch/update → 联调回查
+```
+
+空结果**不是失败**：换标识符 → 放宽维度 → 租户内 `strategy.list` → 资产默认快照，
+并记录「检索式 + 0 refs + 降级路径」。实测坑（目标侧 `interface` 过滤失效、上游 code 不归一、
+`sortBy` 不可靠、`gaps` 未实现）见 [`references/09-knowledge-ref.md`](references/09-knowledge-ref.md) §6。
+
 ### 静态映射：两系统对接的日常件
 
 集成里最常干的事之一是"值翻译"：源系统 `1/2/0` → 目标系统 `男/女/未知`，发票类型 → 金蝶编码。
@@ -240,6 +274,7 @@ DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 58   #
 ```
 
 - `tools/manifest.json` 由**服务端生成**，不是手写；文档提到不存在的工具，CI 直接失败。
+- `strategy.patch` 先于服务端发布写进文档：等服务端上线 capability `2026-11-11` 后用 `dh.py manifest` 重生成（**不要手编工具列表**）。
 - CI 还会编译全部脚本、用 JSON Schema 校验清单、并（非阻断）跑 Markdown lint。
 - CI 不需要真实租户：整套离线、确定性。
 
@@ -248,26 +283,28 @@ DH_MCP_URL=… DH_MCP_KEY=… python scripts/smoke_test.py --expect-tools 58   #
 ## 目录
 
 ```
-SKILL.md                    Agent 入口（渐进披露，约 250 行）
-references/                 8 篇深读：机制·工具·调试·写入·诊断·知识·安全·反模式
+SKILL.md                    Agent 入口（渐进披露，约 420 行）
+references/                 10 篇深读：机制·工具·调试·写入·诊断·知识·REF·安全·反模式·脚本模式
 playbooks/                  4 个可执行剧本
 examples/                   提示词 + 真实调试会话
 scripts/                    dh.py（CLI）· validate_skill.py（离线）· smoke_test.py（在线）
 tools/                      manifest.json（生成）· schema · 客户端配置
 templates/                  方案蓝图·报告·字段映射样例·58 工具验收矩阵
-docs/                       架构·客户端·FAQ·发布·素材
+docs/                       架构·客户端·FAQ·发布·团队绑定·素材
 .github/                    CI · issue/PR 模板 · CODEOWNERS
 ```
 
-文档地图与阅读路径见 [`SKILL.md`](SKILL.md) §9。
+文档地图与阅读路径见 [`SKILL.md`](SKILL.md) §11。
 
 ---
 
 ## 路线图
 
 - [x] v2.0.0 — 无守护进程调试闭环、7 个新工具、影响面熔断、平台机制蒸馏
-- [ ] v2.1 — 58 工具验收矩阵纳入发布门禁；目标端真实写入验证配方
-- [ ] v2.2 — 按平台扩充错误字典（金蝶 → 旺店通/采购云）
+- [x] v2.1 — 静态映射（12 工具）、58 工具验收矩阵、诊断字典扩充
+- [x] v2.2 — **REF 优先**（`knowledge_reference` → 模板 → 适配）、**修改优先**（`strategy.patch` 兼容）、
+      字段契约/中文说明/明细行/时间参数检查点、脚本政策（只输出代码）、团队执行绑定
+- [ ] v2.3 — 按平台扩充错误字典（金蝶 → 旺店通/采购云）；REF 覆盖缺口遥测
 - [ ] v3.0 — 场景库（多方案编排、对账模式）
 
 变更历史见 [`CHANGELOG.md`](CHANGELOG.md)。

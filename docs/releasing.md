@@ -80,7 +80,8 @@ high-intent searches.
 python scripts/dh.py manifest > tools/manifest.json
 
 # 3. gates
-python scripts/validate_skill.py -v
+python scripts/validate_skill.py -v                 # 11 checks（结构/链接/工具名/密钥）
+python scripts/sync_capability.py --check -v        # 能力面：frontmatter/知识 MCP 4 工具/manifest/13 条反馈
 python -m compileall -q scripts
 python scripts/smoke_test.py --expect-tools 58      # needs a tenant; read-only
 
@@ -92,6 +93,36 @@ git add -A && git commit -m "chore(release): v2.0.0"
 git tag -a v2.0.0 -m "v2.0.0"
 git push origin main --tags
 ```
+
+### 发布前能力面校验（Capability surface check）
+
+`scripts/sync_capability.py` 是**离线**一致性门禁（纯 stdlib，CI 与实际发布共用），检查 5 组规则：
+
+| 组 | 规则 |
+|---|---|
+| a | `SKILL.md` frontmatter：`metadata.version`、`metadata.capability_version`、`metadata.knowledge_mcp_tools` 存在且格式正确 |
+| b | `references/09-knowledge-ref.md` 存在且含 `knowledge_reference`；`SKILL.md` 的知识 MCP 工具面恰为 4 个 |
+| c | `tools/manifest.json` 的 `capability_version` / `tool_count` 与 `SKILL.md` 兼容矩阵一致；manifest 落后于 SKILL 目标版本时按模式处理 |
+| d | `SKILL.md` 不得残留「3 个工具」或缺少 `knowledge_reference` 的知识工具三元组 |
+| e | 13 条用户反馈条款在 `§9.1` 可定位（编号 + 关键词 13/13） |
+
+```bash
+# 发布/CI 正常态（manifest 已按服务端最新能力重新生成）
+python scripts/sync_capability.py --check -v
+
+# 窗口期（服务端尚未发布 SKILL 目标能力，manifest 允许暂时落后）
+python scripts/sync_capability.py --check --allow-stale-manifest -v
+```
+
+**退出码**：`0` = 无 FAIL（可有 WARN）；`1` = 至少一条 FAIL；`2` = 参数/环境错误。
+
+**何时必须去掉 `--allow-stale-manifest`**：服务端发布 `SKILL.md` 声明的 `metadata.capability_version`
+（当前为 `2026-11-11`，含 `strategy.patch`），并用 `python scripts/dh.py manifest > tools/manifest.json`
+重新生成清单之后。流程顺序固定：**先服务端发布能力 → 再重生成 manifest → 再去掉窗口参数**；
+否则会长期掩盖"文档能力面领先于服务端"的漂移。
+
+> 注意：`--allow-stale-manifest` 只降级「manifest 落后」这一种失败；frontmatter、知识 MCP、
+> 反馈条款、旧表述等其它规则的 FAIL 不会因此被忽略。
 
 ### First push (empty remote)
 
@@ -135,7 +166,7 @@ non-zero if any step failed (usually a token-permission problem).
 ```markdown
 ## vX.Y.Z — YYYY-MM-DD
 
-**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-10-28 / 46 tools
+**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-11-11 / 58 tools (+ `strategy.patch`)
 
 ### Highlights
 - <one line per user-visible change>
@@ -149,34 +180,33 @@ non-zero if any step failed (usually a token-permission problem).
 - <what breaks, what to do>   (link docs/clients.md §4.3 when relevant)
 
 ### Verification
-- `validate_skill.py` — 10 checks
-- `smoke_test.py` — 8 checks against a read-only tenant
+- `validate_skill.py` — 11 checks
+- `smoke_test.py` — 8 checks against a read-only tenant (58 tools)
 - `--filter Mcp` unit suite — 274 tests (server side)
 ```
 
-### v2.0.0 release notes (ready to paste)
+### v2.2.0 release notes (ready to paste)
+
+> 完整版本写在 [`docs/release-notes/v2.2.0.md`](release-notes/v2.2.0.md)；发布时把该文件内容粘贴到
+> GitHub Release（`release.yml` 会自动读取 `docs/release-notes/<tag>.md`）。摘要：
 
 ```markdown
-## v2.0.0 — 2026-10-28
+## v2.2.0 — 2026-11-11
 
-**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-10-28 / 46 tools
+**Capability baseline**: datahub-mcp 0.1.0 / x-capability-version 2026-11-11 / 58 tools (+ `strategy.patch`)
+knowledge MCP: 4 tools
 
 ### Highlights
-- Daemon-free debug loop: dispatch → read job → consume → patch params → re-run
-- 7 new tools documented: queue.job.get/run/update, log.search, script.validate, connector.list/get
-- Platform mechanics distilled into the repo (fewer knowledge lookups)
-- Safety: dryRun preview, blast-radius circuit breaker, one-shot confirmation token, confirmWrite gate
-
-### Changed
-- `strategy.get` now defaults to `sections=basic`; pass `sections=source|target|all` for full metadata
-- `dispatchSource/Target` work on stopped strategies (`requireRunning=true` restores the old behaviour)
-- Destructive tools always return `precheck`; >1000 rows forces a token even for `trust=full`
-- Debug breadcrumbs are logged as `debug`, not `fatal`; `dbInfo` exposes `log.debug`
+- Reference-first: knowledge_reference cards → template → adapt → copy/patch
+- Modify-first: strategy.patch (server ≥ 2026-11-11) replaces "create a new strategy to change a field"
+- Checkpoints: create-overwrite/scripts, field contract, detail rows, Chinese labels, time-parameter minimum
+- Script policy: agents output code only; copy keeps existing scripts
+- Team execution binding: dh.py → qeasy_mcp.py replacement table, no DH_MCP_* direct calls
 
 ### Verification
-- validate_skill.py — 10 checks
-- smoke_test.py — 8 checks (46 tools, read-only)
-- Real debug session recorded in examples/session-source-debug.md
+- validate_skill.py — 11 checks
+- smoke_test.py — 8 checks (58 tools, read-only)
+- grep knowledge_reference — > 0 across SKILL/references/playbooks/examples/docs
 ```
 
 ---
@@ -188,6 +218,6 @@ non-zero if any step failed (usually a token-permission problem).
 - [ ] Issues/Discussions on, Wiki off
 - [ ] Branch protection requires `validate`
 - [ ] Private vulnerability reporting on
-- [ ] `v2.0.0` release published with notes above
+- [ ] `vX.Y.Z` release published with notes from `docs/release-notes/<tag>.md`
 - [ ] Repository added to the org profile README
 - [ ] Link from `https://www.qeasy.cloud/mcp` back to this repository

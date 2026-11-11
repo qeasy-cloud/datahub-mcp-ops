@@ -100,8 +100,10 @@ dbInfo 说 fatal=3，但 exception.search 一条都没有，是不是系统坏�
 客户要把金蝶的客户资料同步到 CRM。先别配，给我一页可行性：用哪个接口、增量怎么取、
 幂等键用什么、有没有可复制的现成方案。
 ```
-**期望首步**：`asset.connector.list` / `asset.api.list {effect}` / `strategy.list`；
-必要时用知识 MCP 查对象字段与案例；输出选型结论，**不动手**。
+**期望首步**：**先 REF**——`knowledge_reference`（`object=BD_Customer` 或平台对 + `query`）
+找同平台/同对象在跑方案组卡 → 读 `quality` 选卡并记 `templateCitation`；
+再 `strategy.list` 看本租户样板；最后才用 `asset.*` 解析接口 id 与字段事实。
+输出选型结论（含参考方案证据或「检索式 + 0 refs + 降级路径」），**不动手**。
 
 ---
 
@@ -110,7 +112,15 @@ dbInfo 说 fatal=3，但 exception.search 一条都没有，是不是系统坏�
 按这个设计配一个副本，名字叫 <NAME>，每天 2 点跑。配完先别上线。
 ```
 **期望首步**：`strategy.copy`（拿 `newStrategyId`）→ `strategy.update`（名称/cron）→
-`source.update`/`target.update` → `showConfig` 复核；**不** `online`/`start`。
+`source.update`/`target.update`（或 capability ≥ 2026-11-11 时 `strategy.patch`）→ `showConfig` 复核；
+`create` 后必须核对字段/脚本；**不** `online`/`start`。
+
+**用户说**
+```
+这个方案已经跑了一阵，把目标端 FName 改成中文名映射，别新建方案。
+```
+**期望首步**：`strategy.showConfig {direction:"target"}` 读现状 → `strategy.patch`（≥2026-11-11）或
+`target.update {patch}` 只改该字段 → `showConfig` 复核 → lint/联调；**不得**用 `strategy.create` 代替修改。
 
 ---
 
@@ -136,14 +146,49 @@ dbInfo 说 fatal=3，但 exception.search 一条都没有，是不是系统坏�
 
 ---
 
-## 8. 给 Agent 的系统提示（可裁剪）
+## 8. 抄在跑方案（REF）
+
+**用户说**
+```
+这个对象我们以前肯定做过，你先找几条在跑的方案参考一下再配，别从接口资产开始。
+```
+**期望首步**：`knowledge_reference`（平台对 + `object`/`interface`/`query`）→ 按 `quality` 选 2–3 张 →
+`knowledge_fetch(templateCitation)`；把「检索式 + 组卡数 + 质量信号 + 差异清单」作为结论证据。
+
+---
+
+**用户说**
+```
+REF 一条都没搜到，是不是就没有？接下来怎么办？
+```
+**期望首步**：先分三类原因（覆盖缺口 / Standard 看不到 restricted 组卡 `accessHint` / 参数协议错误），
+再按降级阶梯：换标识符 → 放宽维度 → 租户内 `strategy.list` 同对象在跑方案 → 资产默认快照；
+如实记录「检索式 + 0 refs + 降级路径」，**不编造案例**。详见 `../references/09-knowledge-ref.md` §7。
+
+---
+
+**用户说**
+```
+把模板里的配置直接给我粘过来用。
+```
+**期望首步**：模板是"可运行配置快照"不是契约——`knowledge_fetch` 取回后逐项适配 9 项
+（平台对/对象/接口 `effect`/适配器借壳 R013/分页增量/字段契约/脱敏/脚本 review/差异留痕），
+字段以租户 `asset.api.get` 为准；给出差异清单，**不整段粘贴**。
+
+---
+
+## 9. 给 Agent 的系统提示（可裁剪）
 
 ```text
 你是轻易云 Datahub 的集成运维 Agent。工作方式：
-1. 先读 SKILL.md 的 §0–§6，再按 §9 索引打开需要的单篇；不要一次全读。
-2. 任何写操作前，先确认：哪个租户/环境、影响面多大、是否可回滚。
-3. 调试优先改「任务参数」，验证后再回写元数据。
-4. 目标侧写入必须显式 confirmWrite，且写后回查外部系统；平台状态不是证据。
-5. 回答必须包含：结论、证据（id/数字/错误码）、动作（含副作用）、下一步。
-6. 不输出任何密钥/凭据；不跨租户探测。
+1. 先读 SKILL.md 的 §0–§7，再按 §11 索引打开需要的单篇；不要一次全读。
+2. 新建/修改方案：先 REF（knowledge_reference → knowledge_fetch 模板）→ 适配 →
+   copy/patch 落地；create 是最后手段。不要从接口资产开始配。
+3. 任何写操作前，先确认：哪个租户/环境、影响面多大、是否可回滚；
+   团队场景在线调用只走 qeasy_mcp.py（--project + --yes --reason），禁止 DH_MCP_* 直连。
+4. 调试优先改「任务参数」，验证后再回写元数据。
+5. 目标侧写入必须显式 confirmWrite，且写后回查外部系统；平台状态不是证据。
+6. 脚本只输出代码（事件选择 + script.validate 证据 + 保存步骤），不替人保存/部署。
+7. 回答必须包含：结论、证据（id/数字/错误码/REF citation）、动作（含副作用）、下一步。
+8. 不输出任何密钥/凭据；不跨租户探测。
 ```

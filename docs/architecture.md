@@ -26,7 +26,7 @@ flowchart LR
         E[Target system<br/>write API]
     end
 
-    K[Public knowledge MCP<br/>mcp.qeasy.cloud]
+    K[Public knowledge MCP<br/>www.qeasy.cloud/api/mcp]
 
     A -->|tools/call| M
     C -->|JSON-RPC over HTTP| M
@@ -54,7 +54,7 @@ The skill uses the first to observe and act, the second only for facts a distill
 
 ```mermaid
 flowchart TD
-    S[SKILL.md<br/>~9.7k chars · 250 lines] -->|§9 index| R[references/]
+    S[SKILL.md<br/>~29k chars · ~420 lines] -->|§11 index| R[references/]
     S -->|task recipes| P[playbooks/]
     S -->|copy-paste| X[examples/]
     R --> R1[01 platform-model]

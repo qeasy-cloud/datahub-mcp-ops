@@ -1,23 +1,29 @@
 # P3 · 从需求到上线：一个集成方案的完整实施
 
 > 对应人类实施顾问的标准流程：**谈需求 → 写方案 → 配方案 → 调试 → 上线 → 交接**。
-> Agent 的差异只有两点：① 先做"可执行性侦察"再谈方案；② 每一步都留可复核的证据。
+> Agent 的差异只有三点：① 先做"可执行性侦察"（**REF 优先：先查历史在跑方案**）再谈方案；
+> ② **修改优先**（copy → patch），create 是最后手段；③ 每一步都留可复核的证据。
+>
+> 团队场景：把下文 `dh call …` 替换为 `python3 scripts/mcp/qeasy_mcp.py call … --project <项目>`，
+> 写操作另加 `--yes --reason "对象=…;范围=…;影响=…;回滚=…"`（见 `../docs/team-binding.md`）。
 
 ---
 
 ## 阶段 0 · 侦察（10 分钟，只读）
 
-| 要弄清 | 怎么查 |
-|---|---|
-| 两端是什么系统 | `asset.platform.list` / `asset.platform.get` |
-| 有没有现成连接器（哪个环境） | `asset.connector.list`（看 `env`/`host`/`dataCenter`） |
-| 目标对象走哪个接口 | `asset.api.list {platformId, effect:"EXECUTE"}` |
-| 源对象走哪个接口 | `asset.api.list {platformId, effect:"QUERY"}` |
-| 字段要哪些、必填是什么 | `asset.api.get {apiId, includeFields:true}` + 知识 MCP（`06-knowledge-mcp.md`） |
-| 有没有可复制的成熟方案 | `strategy.list`（同平台/同对象） |
+**顺序不能反**：先找"别人怎么配"（REF），再看"本租户有没有样板"，最后才看资产默认值。
 
-**产出**：一页"可行性 + 选型"结论（接口、增量字段、幂等键、主子表形态）。
-**红线**：连接器指向 `production` 时，先确认是否允许写生产（`07-security-and-limits.md` §3）。
+| # | 要弄清 | 怎么查 |
+|---|---|---|
+| 0 | **这个对象/平台对有没有在跑方案可抄** | **`knowledge_reference`（知识 MCP）**：`sourcePlatform`/`targetPlatform`/`object`(FormId)/`interface`/`query`；读 `quality` 选 2–3 张；记 `templateCitation`（详见 `../references/09-knowledge-ref.md`） |
+| 1 | **本租户有没有同对象在跑方案**（可直接 copy） | `strategy.list {source_platform,target_platform}` + `strategy.get {sections:"all"}`（REF 空/差异大时尤其重要） |
+| 2 | 两端是什么系统 | `asset.platform.list` / `asset.platform.get`（**只解析 id 与字段事实，不是配置起点**） |
+| 3 | 有没有现成连接器（哪个环境） | `asset.connector.list`（看 `env`/`host`/`dataCenter`；**阶段 0 只读确认环境，本阶段不改连接器**） |
+| 4 | 目标/源对象走哪个接口 | `asset.api.list {platformId, effect:"EXECUTE"}` / `{effect:"QUERY"}` |
+| 5 | 字段要哪些、必填是什么 | `asset.api.get {apiId, includeFields:true}` + 知识 MCP（`06-knowledge-mcp.md`）；**字段清单以蓝图/`field-contract.json` 为范围上限** |
+
+**产出**：一页"可行性 + 选型"结论（接口、增量字段、幂等键、主子表形态、**参考方案证据**：`templateCitation` 或「检索式 + 0 refs + 降级路径」）。
+**红线**：① 连接器指向 `production` 时，先确认是否允许写生产（`07-security-and-limits.md` §3）；② 无 REF 证据不得进入阶段 2（团队场景见 `../docs/team-binding.md`）。
 
 ---
 
@@ -41,13 +47,19 @@
 
 ---
 
-## 阶段 2 · 配置（优先复制，不要从零建）
+## 阶段 2 · 配置（REF → copy → patch，**不要从零建**）
+
+> 三个优先级：**REF 模板适配**（有在跑方案）→ **租户内 copy**（有同对象样板）→ `create`（最后手段）。
+> 修改已有方案时：`strategy.patch`（服务端 capability ≥ `2026-11-11`）或 `source.update`/`target.update`，
+> **不要用"新建一个"代替"改一个"**。
 
 ```bash
-# ① 找可复制的成熟方案（同平台 + 同对象最理想）
+# ① 找在跑方案：先 REF（知识 MCP 的 knowledge_reference），再租户内（同平台 + 同对象最理想）
+#    知识 MCP 用你的 MCP 客户端调用（与 Datahub MCP 是两套端点/Key；见 ../references/09-knowledge-ref.md）
+#    knowledge_reference {"sourcePlatform":"…","targetPlatform":"…","object":"<FormId>","limit":5}
 dh call strategy.list --args '{"search":"客户","pageSize":20}'
 
-# ② 复制（默认不启动、保留 lastSync、副本停止且未上线）
+# ② 复制（默认不启动、保留 lastSync、副本停止且未上线；含既有事件脚本）
 dh call strategy.copy --args '{"strategyId":"<成熟SID>","name":"<新方案名>","count":1}'
 # → {"newStrategyId":"…"}（顶层字段；detail 里也有 strategies[].strategyId）
 ```
@@ -67,9 +79,17 @@ dh call strategy.target.update --args '{"strategyId":"<新SID>","patch":{ … }}
 - 每次 `update` 都返回 `backup.historyId`/`md5` —— **记下来**。
 - 只改要改的键，用 `patch`（浅合并）；`metaData` 整体替换容易丢字段。
 - 改完立刻 `strategy.showConfig` 复核一次（别攒到最后）。
+- **字段检查点**（`../references/04-write-recipe.md` §2.2）：目标字段 ⊆ 蓝图/字段契约；每个 `value` 是 `{{源字段}}` 或常量；
+  明细容器=裸数组名、子字段=`{{数组名.子字段}}`；每个字段补中文 `label`；时间参数只留增量水位成对参数。
 
-> 没有可复制方案时才用 `strategy.create`：`source` 必须 `effect=QUERY`、`target` 必须 `effect=EXECUTE`；
-> 不给 `metaData` 会自动套用接口资产默认快照。先 `dryRun:true` 验证。
+> **改现有方案**（补字段/改调度/改 adapter）：优先 `strategy.patch`（一次调用、按路径改、`dryRun`/备份/回滚；
+> 服务端 capability ≥ `2026-11-11` 可用）；旧写法 `strategy.update` / `source.update` / `target.update` 仍可用（等价语法糖）。
+>
+> **没有可复制方案时才用 `strategy.create`**（最后手段）：`source` 必须 `effect=QUERY`、`target` 必须 `effect=EXECUTE`；
+> 不给 `metaData` 会自动套用接口资产默认快照。先 `dryRun:true` 验证。**两个必查**：
+> ① **传了 `metaData` 也可能被资产默认快照覆盖**（实测 response 17→73、分页字段重复）→ create 后立即
+> `strategy.get {sections:"all"}` 核对，必要时 `source.update`/`target.update` 整份写回；
+> ② **create 不复制事件脚本** → `script.list` 对照源方案，缺失按 `../references/10-script-patterns.md` 输出代码由人保存。
 
 ---
 

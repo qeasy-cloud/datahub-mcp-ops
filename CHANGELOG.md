@@ -4,6 +4,74 @@ All notable changes to this skill package are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-11-11
+
+服务端 2026-11-11 批次 2（`strategy.delete` 软删除）纳入文档基线：工具面 60（3 meta + 57 业务）；
+新增删除策略条款（confirm/dryRun/运行中拒绝/无恢复 API）。`strategy.patch` 仍为修改类默认入口。
+
+### Added
+- `references/02-tool-catalog.md`：`strategy.delete`（软删除）条目；工具总数更正为 60。
+- `SKILL.md` §10 兼容矩阵：`2026-11-11`+ 标注 60 工具 + `strategy.delete`。
+
+## [2.2.0] - 2026-11-11
+
+Reference-first（REF：抄在跑方案）成为一等能力；修改优先（copy + patch）；执行绑定与 13 条用户反馈条款落地；
+脚本政策改为"只输出代码"；字段契约/中文字段/明细行/时间参数四类检查点进入主流程。
+
+### Added
+
+- **`references/09-knowledge-ref.md`**：知识 MCP 4 工具、`knowledge_reference` 参数与组卡质量信号
+  （`finished/errorRate/active/lastSyncDays/score/runningCount/evidenceGrade/objectType/topStrategies/templateCitation`）、
+  `knowledge_fetch`（`format:"json"`/`maxChars`）、模板适配 9 项、空结果降级阶梯、**2026-11-11 实测坑**
+  （目标侧 `interface` 过滤失效、上游 code 不归一、`sortBy` 不可靠、`gaps` 未实现、摘要字段省略等）。
+- **`references/10-script-patterns.md`**：事件加工厂 5 个可复用模式（补字段/明细重组/报文补值/值翻译/写入前校验）
+  + 事件选择表 + "Agent 只输出代码"交付格式。
+- **`docs/team-binding.md`**：团队执行绑定——`dh.py` → `qeasy_mcp.py` 命令替换表、项目上下文、写前四要素、
+  禁止 `DH_MCP_*` 直连。
+- **`SKILL.md` 新章节**：§3「REF 优先 + 修改优先」（REF 四步、`copy`→`patch`、create 最后手段）、
+  四类落地检查点（create 覆盖/脚本丢失、字段契约、明细行、中文字段/时间参数）、
+  脚本与资产政策、团队执行绑定、§9.1「13 条用户反馈对应条款」自检表。
+- **`docs/release-notes/v2.2.0.md`**；README/README.zh-CN 新增 REF/修改优先特性与 team-binding 说明。
+
+### Changed
+
+- `SKILL.md` frontmatter：单行 description（避免块标量在各宿主解析差异）；`version` → 2.2.0；
+  `capability_version` → `2026-11-11`；新增 `knowledge_mcp_tools: 4`。
+- 知识 MCP：3 → **4 工具**（补 `knowledge_reference`）；端点以 `https://www.qeasy.cloud/api/mcp` 为准
+  （`mcp.qeasy.cloud` 为备用入口）。
+- `playbooks/p3-new-integration.md`：阶段 0 先 REF 再租户内样板再资产；阶段 2 改为 copy/patch 优先，
+  增加「create 覆盖 meta_data」「create 不复制脚本」「字段检查点」。
+- `playbooks/p2`、`playbooks/p4`：脚本相关内容改为"只读核对 + 只输出代码，由人保存"。
+- `references/01`：新增 §5.3.1「请求时间参数最小集」；§7 脚本政策改为只输出代码；§13 增 REF 入口。
+- `references/02`：`strategy.create` 增覆盖/脚本警告；新增 `strategy.patch` 行与兼容说明；速查表增 REF/patch。
+- `references/04`：五步配方改为 REF → copy/patch 优先；§2.1 规则 3 → 6 条（明细容器裸名/子字段前缀/中文 label/时间参数）；
+  §8 自检清单同步。
+- `references/06`：4 工具契约 + `knowledge_reference` 节 + REF 优先组合模式 + 0 候选纪律。
+- `references/08`：新增 F1–F5 反模式（不查 REF 直接配 / create 代替修改 / Agent 保存脚本 / 资产当配置起点 / 时间参数全放）。
+- `docs/faq.md`、`examples/prompts.md`、`examples/session-source-debug.md`：增 REF 示例与空结果处理；
+  新增 patch 兼容、团队绑定、脚本政策 FAQ。
+- `docs/clients.md` 兼容矩阵、`docs/releasing.md` 发布模板、`templates/README.md` 工具数表述同步到 58。
+
+### Fixed
+
+- 文档里"知识 MCP 3 个工具"的过时表述（现为 4 个）。
+- 发布模板中的 "46 tools" / "10 checks" / "8 checks (46 tools)" 过时数字。
+- `strategy.create` 文档未提示"传入 meta_data 也可能被资产默认快照覆盖"的问题。
+
+### Notes
+
+- `strategy.patch` 于服务端 capability **≥ `2026-11-11`** 可用；旧服务端用 `update`/`source.update`/`target.update`
+  等价改写（见 `references/02` §5 兼容矩阵）。
+- `tools/manifest.json` 是服务端生成物：**本版未手编工具列表**；待服务端部署 `2026-11-11` 后由
+  `python scripts/dh.py manifest` 重新生成。
+- 脚本写入能力在 SaaS 可见面移除（保留 `list/get/validate`）；私有化由部署方开关放开（默认关）。
+
+### Verification
+
+- `python scripts/validate_skill.py -v` — 11 checks passed
+- `grep -rn "knowledge_reference"` — > 0（SKILL/refs/playbooks/examples/docs 均命中）
+- `python scripts/smoke_test.py` — 在线只读冒烟（本机未持租户 Key，未运行；CI/使用者环境补跑）
+
 ## [2.1.0] - 2026-10-28
 
 Static value mapping（静态映射，资源中心 → 静态映射资源）成为一等能力：

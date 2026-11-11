@@ -4,10 +4,10 @@
 >
 > | | 知识 MCP（本篇） | Datahub MCP（本 SKILL 主对象） |
 > |---|---|---|
-> | 端点 | `https://mcp.qeasy.cloud/api/mcp` | 你的租户实例 `/api/mcp` |
+> | 端点 | `https://www.qeasy.cloud/api/mcp`（备用 `mcp.qeasy.cloud`） | 你的租户实例 `/api/mcp` |
 > | 形态 | **无状态**（每请求自带 Key；`GET`/`DELETE` → 405） | 有状态（`Mcp-Session-Id`） |
 > | 密钥 | `qk_live_…`（Agent 可 PoW 自助注册，Standard 20 次/天） | `sh-…`（租户开放中心签发） |
-> | 工具 | 3 个：`knowledge_domains` / `knowledge_search` / `knowledge_fetch` | 58 个运维/实施工具 |
+> | 工具 | **4 个**：`knowledge_domains` / `knowledge_search` / `knowledge_fetch` / **`knowledge_reference`** | 58 个运维/实施工具 |
 > | 回答 | 文档 + 可追溯引用 | 真实配置与执行结果 |
 >
 > **分工**：知识 MCP 回答"应该怎么配"（字段、口径、案例）；Datahub MCP 回答"现在是什么、改了会怎样"。
@@ -18,6 +18,7 @@
 
 | 该用 | 不必用（本 SKILL 已内建） |
 |---|---|
+| **同平台/同对象有没有在跑方案可抄**（REF 组卡 + 模板） | → `knowledge_reference`，见 §3.4 与 `09-knowledge-ref.md` |
 | 某业务对象的**最新字段清单**（金蝶客户要哪些必填） | 平台三层元数据模型、`type`/`effect` 语义 → `01-platform-model.md` |
 | 平台间**字段口径差异**（同一个"客户"怎么对） | `{{}}` 语法、parser、`operation` → `01` §3 |
 | **客户案例**的特殊约定（审批流前缀、行业字段） | 调试闭环步骤 → `03-debug-loop.md` |
@@ -71,7 +72,7 @@ curl -sX POST https://qeasy.cloud/api/v1/agent-registrations \
   -d '{"name":"my-agent","framework":"python","challengeId":"…","nonce":"123456"}'
 # → {"data":{"agent":{…},
 #            "mcpKey":{"prefix":"qk_live_1c26","plaintext":"qk_live_…","tier":"standard","dailyQuota":20},
-#            "mcp":{"endpoint":"https://mcp.qeasy.cloud/api/mcp","protocolVersion":"2025-03-26",
+#            "mcp":{"endpoint":"https://www.qeasy.cloud/api/mcp","protocolVersion":"2025-03-26",  // mcp.qeasy.cloud 为备用入口
 #                   "config":{"mcpServers":{"qeasy-knowledge":{"url":"…","headers":{"Authorization":"Bearer …"}}}}}}}
 ```
 
@@ -82,7 +83,7 @@ curl -sX POST https://qeasy.cloud/api/v1/agent-registrations \
 
 ---
 
-## 3. 三个工具的契约（实测）
+## 3. 四个工具的契约（实测）
 
 ### 3.1 `knowledge_domains`
 列出可见域与身份。无入参。返回结构化 + 文本，文本形如：
@@ -122,6 +123,30 @@ Your identity: standard. Your access: public knowledge only.
  "type":"product","url":null,"visibility":"public"}
 ```
 
+### 3.4 `knowledge_reference`（REF：历史在跑方案，2026-11-06 起）
+
+**新方案第一步**：先查同平台/同对象的在跑方案组卡，再取模板适配落地。
+
+```jsonc
+// in（全部可选，但至少一个维度）
+{"sourcePlatform":"领星","targetPlatform":"金蝶云星空","object":"SAL_OUTSTOCK",
+ "sortBy":"evidence","limit":5}
+// out（结构化字段；文本摘要只展示部分）
+{"refs":[{"citation":"docs/knowledge/reference/lingxing-to-kingdee-cloud/SAL_OUTSTOCK.md",
+          "object":"SAL_OUTSTOCK","objectType":"formId",
+          "quality":{"finished":160853,"errorRate":0.009,"active":true,"lastSyncDays":2,"score":0},
+          "runningCount":8,"evidenceGrade":"A",
+          "topStrategies":["领星-发货结算报告=>金蝶云星空-销售出库单（不含日本站）","…"],
+          "templateCitation":"docs/knowledge/templates/lingxing-to-kingdee-cloud/SAL_OUTSTOCK.md"}],
+ "retrieval":{…},"quota":{…}}
+```
+
+- 平台参数接受 **slug / 上游 code / 中文厂商名**；`object` 用 `FormId`（`objectType="api"` 时对象形如 `api:<path>`）。
+- 选卡看 `quality`：`active=true` → `errorRate` 低 → `finished` 多 → `evidenceGrade` 高 → `topStrategies` 业务语义一致；**抽 2–3 张比对**。
+- 取模板：`knowledge_fetch(citation=templateCitation)`；`format:"json"` 返回结构化 `template={source,target,scripts[]}`（`scripts:[]` = 无脚本）。
+- **0 候选不是失败**：先分"维度未覆盖 / Standard 不可见（`accessHint`）/ 参数协议错误"，再按 §5.0 降级阶梯。
+- 完整参数、实测坑（**目标侧 `interface` 过滤失效**、上游 code 不归一、`sortBy` 不可靠、`gaps` 未实现）、空结果降级 → `09-knowledge-ref.md`。
+
 ---
 
 ## 4. 引用纪律（写给人类看的报告必须遵守）
@@ -135,6 +160,16 @@ Your identity: standard. Your access: public knowledge only.
 ---
 
 ## 5. 两个组合模式
+
+### 5.0 REF 优先（新方案默认路径）
+```
+knowledge_reference(平台对 + object/interface/query)    找同平台同对象在跑方案组卡
+  → 读 quality 选 2–3 张（不只看第一条）
+  → knowledge_fetch(templateCitation)                    取源+目标 meta_data（大模板落盘）
+  → 适配 9 项（平台对/对象/接口 effect/适配器借壳/分页增量/字段契约/脱敏/脚本/差异留痕）
+  → strategy.copy 优先 / create 最后 → patch/update 落地 → 联调回查
+空结果 → 换标识符 → 放宽维度 → 租户内 strategy.list 同对象在跑方案 → 资产默认快照 → 记录降级路径
+```
 
 ### 5.1 设计期 → 落地期
 ```
@@ -160,3 +195,5 @@ exception.search / log.search           拿到原始报错
 - ❌ 用知识库的字段清单**直接**配方案而不核对 `asset.api.get`（版本/二开差异会导致"字段不存在"）。
 - ❌ 把 `plaintext` Key 写进代码、示例、issue 或报告。
 - ❌ 在高频循环里调用 `knowledge_search`（20 次/天，先用本 SKILL 的机制篇过滤掉机制类问题）。
+- ❌ 把 `knowledge_reference` 的 0 候选直接当"平台没有这个对象"的最终结论（还有维度/权限/参数三类原因，见 `09-knowledge-ref.md` §7）。
+- ❌ 把模板当官方契约整段粘贴（模板是脱敏配置快照；字段事实源是租户接口资产）。

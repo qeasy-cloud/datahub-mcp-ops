@@ -146,6 +146,9 @@ dh call strategy.data.clean --args '{"strategyId":"<SID>","dryRun":true}'
 - [ ] 重跑变 `repeat`，不产生第二张单
 - [ ] 报告里写明：写了哪个环境、哪张单、如何回查
 
+> **脚本相关**：若目标端需要脚本补值/改报文，见 `../references/10-script-patterns.md`——
+> Agent **只输出代码**（含事件选择与 `script.validate` 证据），由人在平台保存；SaaS 不提供 Agent 直写脚本。
+
 ## 失败快查
 
 | 报错 | 去哪 |

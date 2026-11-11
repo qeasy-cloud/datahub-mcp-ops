@@ -321,6 +321,15 @@ crontab(source/target)
 
 **推荐**：`modified` + **回看窗口 5–15 分钟** + 目标按业务主键 upsert。回看窗口防"源系统提交晚"，重复靠幂等消化。
 
+#### 5.3.1 请求里的时间参数要"最小集"
+
+- **只留一组**增量水位成对参数（如 `modified_start/end`，或 `start_time/end_time`），外加必要的回看窗口；
+- **不要**把 `created/modified/start/end/begin/endTime` 等所有时间字段都塞进 `request[]`：
+  多组并存既可能互相覆盖，也会让排查"到底按哪个水位翻页/取数"变得不可判定；
+- 若业务确实要双水位（如 created 全量 + modified 增量），必须在方案文档里写明**优先级与边界**，
+  并在请求字段上标注用途（这是"配置给人看"的一部分）；
+- 分页键与时间参数的位置要跟平台对齐（见 §5.2），放错位置通常**不报错**，只是静默只取第一页。
+
 ### 5.4 补推/回填
 
 1. 先停目标写入或切影子表；2. 按**业务日期**（不是创建时间）圈范围；
@@ -371,7 +380,10 @@ crontab(source/target)
 2. **源端只在"这条数据确实不该继续"时 throw**，否则会重试到 `max_retries`，队列堆积。
 3. **目标端异常被静默吞掉**：要阻断必须 `return` 或直接改写 `$params`；别指望日志能告诉你失败了。
 
-写之前先用 `script.validate` 做语法校验（`php -l`），再 `script.create`。
+**脚本产出政策（2026-11-11）**：Agent **只输出代码**——给出事件选择、完整 PHP、`script.validate` 通过证据、
+由人保存/部署的步骤与验证计划（见 `10-script-patterns.md`）。SaaS 从 MCP 可见面移除 `script.create/write/delete`
+（保留 `list/get/validate`）；私有化由部署方开关放开，默认关。`strategy.copy` 复制既有脚本是平台既有行为，
+不算 Agent 新增脚本；`strategy.create` **不会**复制脚本。
 
 > 源：`domains/03-event-scripts.md`
 
@@ -456,6 +468,7 @@ crontab(source/target)
 | 某平台某业务对象的**最新字段清单**（如金蝶客户 18 个必填） | 知识 MCP `knowledge_search` → `knowledge_fetch`（对象卡） |
 | 平台间**字段口径差异**（同一个"客户"在 A/B 系统怎么对） | 知识 MCP（mapping 类文档） |
 | **客户案例**里的特殊约定（行业字段、审批流前缀） | 知识 MCP（案例库；需授权档位） |
+| **同平台/同对象有没有在跑方案可抄**（组卡 + 模板） | `knowledge_reference` → `knowledge_fetch(templateCitation)`（见 `09-knowledge-ref.md`） |
 | 平台**端点清单**（某平台支持哪些接口） | `asset.api.list` / `asset.platform.get`（租户实际资产） |
 | 本文机制在**新版本**是否有变化 | 知识 MCP + `meta.capabilities` 的 `capability_version` |
 

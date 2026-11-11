@@ -8,7 +8,7 @@ update, no clean).
 Usage
     export DH_MCP_URL=... DH_MCP_KEY=...
     python scripts/smoke_test.py
-    python scripts/smoke_test.py --strategy-id <SID> --expect-tools 46
+    python scripts/smoke_test.py --strategy-id <SID> --expect-tools 58
 
 Exit code 0 = all checks passed.
 """

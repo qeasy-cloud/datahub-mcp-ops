@@ -11,7 +11,7 @@
 | 类型 | 端点 | 密钥前缀 | 状态 | 用途 |
 |---|---|---|---|---|
 | 租户 Datahub MCP | `https://<租户>/api/mcp` | `sh-…` | 有状态（`Mcp-Session-Id`） | 读写该租户的方案/数据 |
-| 公开知识 MCP | `https://mcp.qeasy.cloud/api/mcp` | `qk_live_…` | 无状态 | 只读官方知识 |
+| 公开知识 MCP | `https://www.qeasy.cloud/api/mcp`（备用 `mcp.qeasy.cloud`） | `qk_live_…` | 无状态 | 只读官方知识（4 工具） |
 
 **它们不通用**：`qk_` 只能查知识，`sh-` 才能动数据。
 
