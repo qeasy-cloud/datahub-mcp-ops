@@ -143,6 +143,10 @@
 
 > 共同边界：`filter ≤16KB`、`pipeline ≤32KB`、JSON 深度 ≤8、`$regex ≤200` 字符、
 > 响应 ≤512KB（超出丢尾部文档并标 `truncated`）。跨租户 id → `strategy_access_denied`。
+>
+> **Open API 对等入口**：`POST /v2/open-api/business/{strategyId}/data/{sample|query|aggregate|distinct}?access_token=...`
+> （OAuth，统一信封 `{success,code,message,content}`，`error_code` 与 MCP 的 `code` 一致）。
+> MCP 用于探索/验收，Open API 用于页面与脚本长期调用；页面须经服务端代理，token 不下发浏览器。
 
 ---
 

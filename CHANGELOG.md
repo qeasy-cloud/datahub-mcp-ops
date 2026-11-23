@@ -4,6 +4,23 @@ All notable changes to this skill package are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026-11-24
+
+ADATA 查询能力补齐 **Open API 对等入口**（平台侧 2026-11-24 交付）：
+`POST /v2/open-api/business/{strategyId}/data/{sample|query|aggregate|distinct}?access_token=...`
+与 MCP 的 4 个 Tool **共用同一实现**（参数名/上限/错误码完全一致），OAuth 统一信封
+`{success,code,message,content}`，`content.error_code` 对应 MCP 的 `code`。
+
+### Added
+
+- `SKILL.md` §5.2、`references/02` 增加 Open API 对照与「MCP 探索 → Open API 落地」用法；
+- 页面开发指引：服务端代理保存 access_token，禁止前端直连；先 MCP 校验口径再用 Open API 落代码。
+
+### Verification
+
+- 服务端 Feature 测试 9 项（路由/信封/错误映射/body 校验）+ 真实 HTTP E2E 22 项（含跨租户与坏 token）；
+- MCP 回归 E2E 33/33（确认抽公共实现后 MCP 行为不变）。
+
 ## [2.3.0] - 2026-11-23
 
 ADATA 自由查询成为一等能力：新增 4 个只读 Tool，Agent 可用**标准 MongoDB 语法**自主分析方案数据。

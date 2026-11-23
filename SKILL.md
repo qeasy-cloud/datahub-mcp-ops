@@ -3,7 +3,7 @@ name: datahub-mcp-ops
 description: Operate, debug and implement integrations on Datahub / 轻易云 (qeasy.cloud) through its MCP endpoint — reference-first and modify-first. Use when the user mentions 轻易云 / Datahub / 数据集成 / 方案 / 队列 / 字段映射 / 重推 / 巡检 / 调试 / 抄在跑方案 / REF, or provides a strategyId, jobId or 金蝶 error message and wants it understood, fixed or verified. Covers history reference (REF) cards from the knowledge MCP and template adaptation; the manual debug loop (dispatch → read queue job → consume it → patch job params → re-run) even with no daemon; copy-first / patch-first modification instead of creating new strategies; field-contract, Chinese-label, detail-row and time-parameter checkpoints; script policy (output code only); asset tools used only to resolve ids and field facts; write verification and safe cleanup.
 license: MIT
 metadata:
-  version: 2.3.0
+  version: 2.3.1
   homepage: https://github.com/qeasy-cloud/datahub-mcp-ops
   capability_version: "2026-11-23"
   min_server: datahub-mcp 0.1.0
@@ -286,6 +286,12 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 边界：`filter ≤16KB`、`pipeline ≤32KB`、`$regex ≤200` 字符、响应 `≤512KB`；
 禁止 `$out/$merge`（写库）、`$lookup/$graphLookup/$unionWith`（跨集合）、
 `$where/$function/$accumulator`（服务端代码）。跨租户 id → `strategy_access_denied`。
+
+**代码/页面落地（Open API 对等入口）**：同一能力同时通过
+`POST /v2/open-api/business/{strategyId}/data/{sample|query|aggregate|distinct}?access_token=...`
+提供（OAuth access_token，统一信封 `{success,code,message,content}`；参数名、上限、错误码与 MCP 一致）。
+MCP 用于**探索与验收**，Open API 用于**长期运行/页面**；页面必须由服务端代理调用并保存 token，
+不要把 access_token 下发浏览器。平台 Open API 文档见「strategy-data-query / agent-analysis-page-guide」两篇。
 
 ---
 
