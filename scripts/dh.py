@@ -405,18 +405,29 @@ def cmd_manifest(client: Client, args: argparse.Namespace) -> int:
                 "properties": sorted((schema.get("properties") or {}).keys()),
             }
         )
-    experimental = (client.capabilities or {}).get("experimental") or {}
+    init = client.initialize() or {}
+    init_caps = init.get("capabilities") or {}
+    server_info = init.get("serverInfo") or {}
+    capability_version = (
+        init_caps.get("x-capability-version")
+        or server_info.get("x-capability-version")
+        or ""
+    )
+    # tools/list 同时包含 meta.*；manifest 约定把 meta 单列（CI 校验 tool_count = tools + meta）。
+    meta_tools = sorted(
+        entry["name"] for entry in entries if (entry["name"] or "").startswith("meta.")
+    )
+    business = [entry for entry in entries if not (entry["name"] or "").startswith("meta.")]
     manifest = {
         "schema_version": "1.0.0",
-        "server": (client.server_info or {}).get("name"),
-        "server_version": (client.server_info or {}).get("version"),
-        "capability_version": experimental.get("x-capability-version"),
+        "server": server_info.get("name"),
+        "server_version": server_info.get("version"),
+        "capability_version": capability_version,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "tool_count": len(entries),
-        "business_tool_count": len(
-            [entry for entry in entries if not (entry["name"] or "").startswith("meta.")]
-        ),
-        "tools": entries,
+        "tool_count": len(business) + len(meta_tools),
+        "business_tool_count": len(business),
+        "meta_tools": [{"name": name} for name in meta_tools],
+        "tools": business,
     }
     _print_json(manifest)
     return 0

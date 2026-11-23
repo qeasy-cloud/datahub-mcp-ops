@@ -1,959 +1,1017 @@
 {
-    "schema_version": "1.0.0",
-    "server": "datahub-mcp",
-    "server_version": "0.1.0",
-    "capability_version": "2026-10-28",
-    "generated_at": "2026-10-28T10:06:27+08:00",
-    "tool_count": 58,
-    "business_tool_count": 55,
-    "meta_tools": [
-        {
-            "name": "meta.whoami",
-            "scope": null,
-            "risk": "read"
-        },
-        {
-            "name": "meta.capabilities",
-            "scope": null,
-            "risk": "read"
-        },
-        {
-            "name": "meta.enums",
-            "scope": null,
-            "risk": "read"
-        }
-    ],
-    "tools": [
-        {
-            "name": "asset.api.get",
-            "title": "接口资产详情",
-            "scope": "asset:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "按 apiId 获取接口资产详情：头部信息、请求字段清单、响应字段清单，以及示例请求/响应（示例来源于资产示例库；缺失时按字段默认值推导，并标注 source=derived）。includeFields=false 时只返回头部与字段数，适合先探明规模再决定是否拉字段。字段清单最多返回 300 条/侧，超出部分以 omitted 计数标注。",
-            "required": [
-                "apiId"
-            ],
-            "properties": [
-                "apiId",
-                "includeFields"
-            ]
-        },
-        {
-            "name": "asset.api.list",
-            "title": "接口资产列表",
-            "scope": "asset:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "查询接口资产目录。effect 决定用途：QUERY=源端取数接口，EXECUTE=目标端写入接口。返回 apiId/名称/编码/方向/方法/平台/审核状态/字段数，用于为方案选择源端与目标端接口。只读；资产是全局目录（不按租户过滤）；不返回完整字段定义与适配器源码。",
-            "required": [],
-            "properties": [
-                "platformId",
-                "effect",
-                "search",
-                "status",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "asset.connector.get",
-            "title": "连接器详情",
-            "scope": "asset:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "按 connectorId 读取连接器详情：名称 / 所属平台 / 环境 / 环境地址 / 数据中心 / 操作者（部分脱敏）/ 是否已配置 app_secret / 是否配置 OAuth / 被多少方案的源端与目标端引用。**不返回任何凭据明文**（app_secret、密码、token 一律不出现）。",
-            "required": [
-                "connectorId"
-            ],
-            "properties": [
-                "connectorId"
-            ]
-        },
-        {
-            "name": "asset.connector.list",
-            "title": "连接器清单",
-            "scope": "asset:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "列出当前租户的连接器（数据源实例）：id / 名称 / 所属平台 / 环境（development/test/production）/ 环境地址 host / 数据中心 / 启用状态。可按 platformId 或关键字过滤。不含任何凭据（app_secret/密码一律不返回，账号与 app_id 为部分脱敏）。",
-            "required": [],
-            "properties": [
-                "platformId",
-                "keyword",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "asset.platform.get",
-            "title": "平台详情",
-            "scope": "asset:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "按 platformId 获取平台详情：名称/编码/分组/适配器/启用状态、该平台下接口资产数量，以及可选的平台应用清单（id/name/type）。不含连接器凭据与环境参数。",
-            "required": [
-                "platformId"
-            ],
-            "properties": [
-                "platformId",
-                "includeApps"
-            ]
-        },
-        {
-            "name": "asset.platform.list",
-            "title": "平台列表",
-            "scope": "asset:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "查询平台目录（可接入的外部系统，如金蝶云星空、旺店通）。返回平台 id、名称、编码、分组、适配器类名与启用状态，用于新建/复制方案前的选型。只读，不返回任何连接器凭据或环境参数。注意：平台是**全局目录**，不属于某个租户。",
-            "required": [],
-            "properties": [
-                "search",
-                "status",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "audit.search",
-            "title": "查询 MCP 审计",
-            "scope": "audit:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "查询本租户的 MCP 调用审计（倒序分页）。可按 Tool 名、状态（success/denied/error）、错误码、密钥 id 与时间范围过滤；时间窗最多 31 天，pageSize ≤100。默认不返回调用参数与结果载荷（includePayload=false）；打开后会脱敏并截断。租户范围恒定收敛到当前密钥所属租户，不接受 lesseeId 入参。",
-            "required": [],
-            "properties": [
-                "tool",
-                "status",
-                "errorCode",
-                "grantId",
-                "beginTime",
-                "endTime",
-                "currentPage",
-                "pageSize",
-                "includePayload",
-                "payload"
-            ]
-        },
-        {
-            "name": "exception.search",
-            "title": "同步异常检索",
-            "scope": "exception:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "检索当前租户的同步异常记录。可按方案 id / 方案名称、错误描述关键字、接口名、平台 id、业务编号、数据 id 过滤，并可限定时间范围。典型用法：先 strategy.dbInfo 发现错误堆积后，用本工具定位具体失败原因与原始数据引用。",
-            "required": [],
-            "properties": [
-                "strategyId",
-                "strategyName",
-                "text",
-                "api",
-                "platformId",
-                "number",
-                "dataId",
-                "beginTime",
-                "endTime",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "mapping.category.create",
-            "title": "新建静态映射分类",
-            "scope": "mapping:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "新建一个静态映射分类（资源中心 → 静态映射资源）。分类名在租户内唯一。建好后用 mapping.relation.create / mapping.relation.import 填 a_value → b_value，最后把返回的 categoryId 挂到方案字段的 mapping.target 上。",
-            "required": [
-                "name"
-            ],
-            "properties": [
-                "name",
-                "describe"
-            ]
-        },
-        {
-            "name": "mapping.category.delete",
-            "title": "删除静态映射分类",
-            "scope": "mapping:write",
-            "risk": "destructive",
-            "requires_confirmation": true,
-            "description": "删除一个静态映射分类，**并连带删除其全部 a/b 映射关系**，不可恢复。默认会先扫描引用：若该分类仍被方案字段使用，直接拒绝（错误码 mapping_category_in_use）；确认要删必须显式 force=true。首次调用返回影响面预检与确认令牌。",
-            "required": [
-                "categoryId"
-            ],
-            "properties": [
-                "categoryId",
-                "force",
-                "dryRun",
-                "confirmationToken"
-            ]
-        },
-        {
-            "name": "mapping.category.get",
-            "title": "静态映射分类详情",
-            "scope": "mapping:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "读取单个静态映射分类：名称/描述、条数、前 N 条映射样本、**被哪些方案的哪些字段引用**（含方向），并给出可直接粘进 meta_data 的 mapping 片段。排查\"映射配了但没生效\"时先看这里：引用为空 = 根本没挂上。",
-            "required": [
-                "categoryId"
-            ],
-            "properties": [
-                "categoryId",
-                "sampleSize",
-                "includeUsage"
-            ]
-        },
-        {
-            "name": "mapping.category.list",
-            "title": "静态映射分类清单",
-            "scope": "mapping:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "列出本租户的静态映射分类（如\"性别\"\"发票类型\"），含每个分类的映射条数与最近更新时间。可按名称搜索、分页。静态映射用于把源系统的值翻译成目标系统的值（a_value → b_value）。**先用本工具拿 categoryId，再查 mapping.relation.list / mapping.category.get。**",
-            "required": [],
-            "properties": [
-                "search",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "mapping.category.update",
-            "title": "修改静态映射分类",
-            "scope": "mapping:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "修改静态映射分类的名称或说明。改名不影响已挂载的方案（方案里存的是 categoryId，不是名称），返回 before/after 便于复核。",
-            "required": [
-                "categoryId"
-            ],
-            "properties": [
-                "categoryId",
-                "name",
-                "describe"
-            ]
-        },
-        {
-            "name": "mapping.relation.create",
-            "title": "新增映射关系",
-            "scope": "mapping:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "在指定分类下新增一条映射关系。a_value 在分类内唯一；a_value=\"*\" 是兜底行（每个分类只能有一条，命中不到任何精确值时使用）。批量导入用 mapping.relation.import 更快。",
-            "required": [
-                "categoryId",
-                "aValue",
-                "bValue"
-            ],
-            "properties": [
-                "categoryId",
-                "aValue",
-                "bValue",
-                "aLabel",
-                "bLabel"
-            ]
-        },
-        {
-            "name": "mapping.relation.delete",
-            "title": "删除映射关系",
-            "scope": "mapping:write",
-            "risk": "destructive",
-            "requires_confirmation": true,
-            "description": "按 relationId 删除一条映射关系。删除后该值在映射中变成\"未命中\"：若有 * 兜底行则走兜底，否则**原值直通**（不报错）。首次调用返回预检与确认令牌。",
-            "required": [
-                "relationId"
-            ],
-            "properties": [
-                "relationId",
-                "dryRun",
-                "confirmationToken"
-            ]
-        },
-        {
-            "name": "mapping.relation.import",
-            "title": "批量导入映射关系",
-            "scope": "mapping:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "批量写入映射关系（对应平台\"导入 Excel\"）。按 a_value 在分类内 upsert：已存在则更新 b_value/label，不存在则新增。单次 ≤500 行；支持 dryRun 预检（只返回将新增/更新多少）。行格式：{\"aValue\":\"1\",\"bValue\":\"男\"} 或 {\"a_value\":\"1\",\"b_value\":\"男\",\"a_label\":\"...\",\"b_label\":\"...\"}。",
-            "required": [
-                "categoryId",
-                "rows"
-            ],
-            "properties": [
-                "categoryId",
-                "rows",
-                "mode",
-                "dryRun"
-            ]
-        },
-        {
-            "name": "mapping.relation.list",
-            "title": "静态映射关系清单",
-            "scope": "mapping:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "按分类分页查询映射关系（a_value → b_value，含可选 a_label/b_label）。不传 categoryId 时跨分类搜索，用于回答\"这个值到底被映射成什么/哪个分类里配了它\"。a_value=\"*\" 表示兜底行（未命中时使用）。",
-            "required": [],
-            "properties": [
-                "categoryId",
-                "search",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "mapping.relation.update",
-            "title": "修改映射关系",
-            "scope": "mapping:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "按 relationId 修改一条映射的 a_value / b_value / 说明。只改传入的字段，返回 before/after。改 a_value 时仍会做分类内唯一性校验。",
-            "required": [
-                "relationId"
-            ],
-            "properties": [
-                "relationId",
-                "aValue",
-                "bValue",
-                "aLabel",
-                "bLabel"
-            ]
-        },
-        {
-            "name": "mapping.resolve",
-            "title": "试算静态映射结果",
-            "scope": "mapping:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "按平台**完全相同的语义**试算映射结果，不改任何数据：给定分类 + 值 + 方向（positive=a→b，reverse=b→a），返回命中结果、命中方式（exact/wildcard/none）与命中行。支持一次传多个值。排查\"映射配了但结果不对\"时，这是最快的判据：matched=none 说明这个值没配对且无 * 兜底，平台会原值返回。",
-            "required": [
-                "categoryId"
-            ],
-            "properties": [
-                "categoryId",
-                "value",
-                "values",
-                "direction"
-            ]
-        },
-        {
-            "name": "mapping.usage",
-            "title": "静态映射引用关系",
-            "scope": "mapping:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "反查本租户所有方案里挂了静态映射的字段：方案、方向、字段名、映射分类与映射方向。不传 categoryId 时返回全量引用汇总 + **孤儿引用**（引用了已删除/不存在的分类 id）。删除分类前、或排查\"映射好像没挂上\"时用它。",
-            "required": [],
-            "properties": [
-                "categoryId"
-            ]
-        },
-        {
-            "name": "script.create",
-            "title": "新建事件加工脚本",
-            "scope": "script:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "为方案新建事件加工脚本（如 BeforeSourceJobInsert 清洗源数据、AfterTargetGenerate 改写目标报文）。平台限制：仅平台管理员可用。同一方案同一事件只能有一个脚本；脚本长度 ≤64KB。event 可带 Source-/Target- 前缀（写入时自动去除）。创建后会重新编译运行时脚本并刷新调度缓存。**写入前会用 php -l 做真实语法校验**：语法错误直接拒绝并返回行号，不会落库。",
-            "required": [
-                "strategyId",
-                "name",
-                "event",
-                "script"
-            ],
-            "properties": [
-                "strategyId",
-                "name",
-                "event",
-                "script",
-                "status",
-                "sortOrder"
-            ]
-        },
-        {
-            "name": "script.delete",
-            "title": "删除事件加工脚本",
-            "scope": "script:write",
-            "risk": "destructive",
-            "requires_confirmation": true,
-            "description": "删除方案下的事件加工脚本（含运行时文件）。**破坏性操作**：删除前自动备份脚本历史，备份失败则拒绝删除。要求方案未上线且未运行（先 strategy.stop / strategy.offline），且仅平台管理员可用。首次调用返回预检与确认令牌，复核后携带 confirmationToken 再次调用执行。",
-            "required": [
-                "strategyId",
-                "scriptId"
-            ],
-            "properties": [
-                "strategyId",
-                "scriptId"
-            ]
-        },
-        {
-            "name": "script.get",
-            "title": "查看脚本源码",
-            "scope": "script:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "读取集成方案的脚本源码。传 scriptId 取指定脚本；不传则返回该方案下全部脚本的源码。脚本按触发事件组织（如 AfterSourceDispatch、BeforeTargetInvoke），是数据转换与适配逻辑的载体。修改脚本请用 script.write（会先自动备份历史版本）。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "scriptId"
-            ]
-        },
-        {
-            "name": "script.list",
-            "title": "方案脚本列表",
-            "scope": "script:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "列出指定集成方案的脚本：脚本名、触发事件（event，如 AfterSourceDispatch / BeforeTargetInvoke）、方向（source/target）、启用状态与排序。脚本源码请另用 script.get 获取。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId"
-            ]
-        },
-        {
-            "name": "script.validate",
-            "title": "脚本语法自检",
-            "scope": "script:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "对一段 PHP 脚本源码做语法校验（php -l），返回是否通过、错误行号与原文。无副作用、不落库，可在 script.create / script.write 之前调用。仅校验语法，不校验业务逻辑；脚本会以代码片段形式校验（缺少 <?php 时会自动补齐）。",
-            "required": [
-                "script"
-            ],
-            "properties": [
-                "script"
-            ]
-        },
-        {
-            "name": "script.write",
-            "title": "编写脚本",
-            "scope": "script:write",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "改写集成方案的脚本源码。写入前自动备份当前版本（可在历史中回滚），写入后重新生成运行时脚本文件并刷新调度缓存。⚠️ 脚本会在数据同步管道中实际执行，修改前请用 script.get 读取现状并充分确认。平台限制：本能力仅对平台管理员开放（与平台前端的事件加工厂权限一致）。",
-            "required": [
-                "strategyId",
-                "scriptId",
-                "script"
-            ],
-            "properties": [
-                "strategyId",
-                "scriptId",
-                "script",
-                "name",
-                "status",
-                "sortOrder"
-            ]
-        },
-        {
-            "name": "strategy.checkList",
-            "title": "上线检查项",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "读取方案源端或目标端的上线检查项（check-list）：每项是否已确认、哪些是阻断项。direction 必填（source/target）。只读——不会替你勾选检查项；若返回 blockingCount>0，需先在平台完成确认再调用 strategy.online（或由管理员 force）。",
-            "required": [
-                "strategyId",
-                "direction"
-            ],
-            "properties": [
-                "strategyId",
-                "direction"
-            ]
-        },
-        {
-            "name": "strategy.config.rollback",
-            "title": "回滚方案配置",
-            "scope": "strategy:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "把集成方案的源端或目标端配置回滚到指定的历史快照。historyId 与 md5 来自 strategy.source.update / strategy.target.update 返回的 backup 字段。回滚前系统会再给当前配置打一份快照（因此回滚本身也可被回滚）。",
-            "required": [
-                "strategyId",
-                "direction",
-                "historyId",
-                "md5"
-            ],
-            "properties": [
-                "strategyId",
-                "direction",
-                "historyId",
-                "md5"
-            ]
-        },
-        {
-            "name": "strategy.copy",
-            "title": "复制集成方案",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "复制一个集成方案（含源/目标元数据与事件脚本），返回新方案 id。默认 count=1、不启动、保留源方案 last_sync、沿用源方案 direction，副本为停止且未上线状态。这是安全的改动姿势：先 strategy.copy 副本 → 在副本上 strategy.update / strategy.source.update → strategy.checkList → strategy.online。dryRun=true 只校验并返回计划，不落库。单次最多 10 个。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "count",
-                "name",
-                "keepLastSync",
-                "startAt",
-                "autoStart",
-                "dryRun"
-            ]
-        },
-        {
-            "name": "strategy.create",
-            "title": "新建集成方案",
-            "scope": "strategy:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "按蓝图新建一个集成方案：basic 为基本信息与调度，source 必须是取数接口（effect=QUERY），target 必须是写入接口（effect=EXECUTE）。连接器必须属于当前租户，code 在租户内唯一。不传 metaData 时自动套用接口资产的默认元数据快照。dryRun=true 只做完整校验并返回计划，不落库。默认不启动（autoStart=false）。",
-            "required": [
-                "basic",
-                "source",
-                "target"
-            ],
-            "properties": [
-                "basic",
-                "source",
-                "target",
-                "autoStart",
-                "dryRun"
-            ]
-        },
-        {
-            "name": "strategy.data.clean",
-            "title": "清空方案数据",
-            "scope": "strategy:ops",
-            "risk": "destructive",
-            "requires_confirmation": true,
-            "description": "清空指定集成方案的数据条目集合（保留运行日志与队列任务）。**破坏性操作**：数据条目是业务同步的产出，清空后无法通过本平台恢复。执行前必须先 strategy.stop 停止方案，且方案需已下线。**执行策略**：① 不带 confirmationToken 调用时总会返回 precheck（影响面条数）；② 密钥 trust=confirm/guarded，或影响面超过平台阈值时，还会返回 confirmationToken，需带令牌二次调用才执行；③ trust=full 且影响面未超阈值时直接执行（仍返回 precheck）；④ dryRun=true 只预演。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "dryRun",
-                "confirmationToken"
-            ]
-        },
-        {
-            "name": "strategy.data.cleanAll",
-            "title": "清空方案全部数据",
-            "scope": "strategy:ops",
-            "risk": "destructive",
-            "requires_confirmation": true,
-            "description": "清空指定集成方案的全部运行痕迹：运行日志、数据条目、源队列、目标队列。**破坏性最强**：所有历史记录与同步产出都会消失，无法通过本平台恢复。执行前必须先 strategy.stop 停止方案，且方案需已下线。**执行策略**：① 不带 confirmationToken 调用时总会返回 precheck（影响面条数）；② 密钥 trust=confirm/guarded，或影响面超过平台阈值时，还会返回 confirmationToken，需带令牌二次调用才执行；③ trust=full 且影响面未超阈值时直接执行（仍返回 precheck）；④ dryRun=true 只预演。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "dryRun",
-                "confirmationToken"
-            ]
-        },
-        {
-            "name": "strategy.data.import",
-            "title": "导入方案数据",
-            "scope": "strategy:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "向方案的源数据集合导入 JSON 数据条目（不自动写入目标系统）。每行必须包含源接口的业务键字段（源端 meta_data.id / number 指向的字段）。限制：单次 ≤1000 行、≤1MB；行内禁止以 `$` 开头的键（防 Mongo 操作符注入）。duplicatePolicy=skip（默认）跳过已存在的业务键，error 则记为失败。autoDispatchTarget=true 才会立即触发目标端调度（需要 strategy:ops）。",
-            "required": [
-                "strategyId",
-                "rows"
-            ],
-            "properties": [
-                "strategyId",
-                "rows",
-                "dryRun",
-                "autoDispatchTarget",
-                "duplicatePolicy"
-            ]
-        },
-        {
-            "name": "strategy.data.search",
-            "title": "方案数据条目查询",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "查询指定集成方案的数据条目。可按处理状态过滤（语义词：await 等待中 / error 错误的 / queue 队列中 / finished 已完成 / repeat 重复的 / unhandle 不处理 / continue 跳过调度 / fkc 未审核）、按业务编号或数据 id 精确匹配。返回每条数据的状态（含中文标签）、业务编号、创建时间与内容摘要。典型用法：列出 status=error 的条目以定位同步失败原因。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "status",
-                "number",
-                "dataId",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "strategy.data.setStatus",
-            "title": "修改数据条目状态",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "把指定的数据条目调整为某个处理状态。status **只能传语义词**，可选：await（等待中，即「重新推送」）/ repeat（重复）/ finished（已完成）/ error（错误）/ fkc（未审核）/ queue（队列中）/ continue（跳过调度）/ unhandle（不处理，即丢弃）。**不要传裸数字**——数字 0 与 2 的语义与直觉相反，容易造成数据被静默丢弃。重推标准编排：置为 await → strategy.dispatchTarget → strategy.queue.list 确认入队。",
-            "required": [
-                "strategyId",
-                "status"
-            ],
-            "properties": [
-                "strategyId",
-                "dataId",
-                "dataIds",
-                "status"
-            ]
-        },
-        {
-            "name": "strategy.dbInfo",
-            "title": "方案数据概览",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "获取指定集成方案的存储计数快照：日志（记录/通知/成功/错误/致命/**调试留痕**）、数据（等待中/重复/已完成/错误/未审核/队列中）、源队列与目标队列（队列中/错误/已完成）的条数，以及最近一次队列运行的结果摘要（last_run）。**注意**：error / fatal 只统计真实错误，人工调试产生的请求/响应留痕单独计入 debug，它们不是错误，需要看正文请用 strategy.log.search（level=debug）。这是巡检的第一步：用一次调用判断方案整体健康度与积压位置，再决定是否下钻查询明细。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId"
-            ]
-        },
-        {
-            "name": "strategy.dbResetStatus",
-            "title": "重置数据状态",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "把指定集成方案的**所有**数据条目状态重置为「等待中」，并清空目标侧异常队列。适用于方案长时间异常后整体重跑。注意这是全量操作，会影响所有数据条目；若只想处理个别数据，请用 strategy.data.setStatus。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId"
-            ]
-        },
-        {
-            "name": "strategy.dispatchSource",
-            "title": "触发源侧调度",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "手动触发指定集成方案的源侧调度：调用源接口拉取数据并生成源队列任务，返回组装后的请求与 jobId。**方案停止状态下同样可用**（调试期常态）：此时只入队、不会被自动消费，请用 strategy.queue.job.run 手工执行该 jobId。若方案处于运行中，守护进程会自动消费。需要\"必须是运行中才允许触发\"的严格语义时，传 requireRunning=true。适用于「等待中的数据没有增加」「源队列无积压但应有新数据」的场景。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "requireRunning"
-            ]
-        },
-        {
-            "name": "strategy.dispatchTarget",
-            "title": "触发目标侧调度",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "手动触发指定集成方案的目标侧调度：把数据推入目标队列，返回 jobId 与下一步。**方案停止状态下同样可用**（调试期常态）：此时只入队，请用 strategy.queue.job.run（direction=target, confirmWrite=true）手工执行。注意：入队不等于已写入外部系统，真正写入发生在队列任务被消费时。典型编排：strategy.data.setStatus 把错误数据置为「等待中」→ 本工具入队 → strategy.queue.job.run 消费 → 回查外部系统。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "requireRunning"
-            ]
-        },
-        {
-            "name": "strategy.get",
-            "title": "集成方案详情",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "获取单个集成方案的详情：名称、运行状态、上线状态、源/目标平台与连接器、源/目标调度周期（crontab）、源/目标元数据摘要（其中凭据字段以 *** 脱敏）。**默认只返回 basic（不含完整 meta_data）**，避免一次返回数万字符挤占上下文；需要完整配置时显式传 sections=source|target|all。修改配置前建议先调用本工具读取现状。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "sections"
-            ]
-        },
-        {
-            "name": "strategy.list",
-            "title": "集成方案列表",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "查询当前租户下的集成方案（数据同步任务）。支持按名称关键词、运行状态、分组、源/目标平台筛选，返回方案的稳定 id、名称、运行状态（带中文标签）、上线状态、源/目标平台与调度周期。本工具是所有方案级操作的第一步：拿到 strategyId 后才能调用其他 strategy.* 工具。",
-            "required": [],
-            "properties": [
-                "search",
-                "status",
-                "group",
-                "source_platform",
-                "target_platform",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "strategy.log.search",
-            "title": "方案运行日志检索",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "检索方案的运行日志正文（`<strategyId>_LOG`）。可按级别（debug/record/notice/success/error/fatal/all）、关键字、队列任务 id（jobId）与时间范围过滤，返回日志文本与业务载荷（请求/响应/连接信息）。**默认排除 debug**；排查\"这次请求/响应到底是什么\"时请显式传 level=debug。这是 exception.search 查不到问题时的下一跳：异常队列只记\"失败\"，日志才记\"过程\"。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "level",
-                "text",
-                "jobId",
-                "begin",
-                "end",
-                "includeContent",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "strategy.offline",
-            "title": "下线集成方案",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "将方案置为未上线（is_online=0）。stopFirst=true（默认）时，若方案正在运行会先停止调度，避免「已下线但仍在产数据」的中间态。不会删除数据或配置，可随时重新 strategy.online。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "stopFirst"
-            ]
-        },
-        {
-            "name": "strategy.online",
-            "title": "上线集成方案",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "将方案置为已上线（is_online=1）。默认先检查源/目标两端的 check-list：存在未确认项时返回 check_list_blocked 并列出阻断项。force=true 可跳过阻断（高风险，结果会标注 forced，并写入审计）。上线不等于启动：调度仍由 strategy.start 控制。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "force"
-            ]
-        },
-        {
-            "name": "strategy.queue.clean",
-            "title": "清空方案队列",
-            "scope": "strategy:ops",
-            "risk": "destructive",
-            "requires_confirmation": true,
-            "description": "清空指定集成方案的源队列与目标队列，并把数据条目状态重置为初始状态。**破坏性操作**：执行前必须先 strategy.stop 停止方案，且方案需已下线。**执行策略**：① 不带 confirmationToken 调用时总会返回 precheck（影响面条数）；② 密钥 trust=confirm/guarded，或影响面超过平台阈值时，还会返回 confirmationToken，需带令牌二次调用才执行；③ trust=full 且影响面未超阈值时直接执行（仍返回 precheck）；④ dryRun=true 只预演。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "dryRun",
-                "confirmationToken"
-            ]
-        },
-        {
-            "name": "strategy.queue.job.get",
-            "title": "队列任务详情",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "按 jobId 读取一条队列任务的完整信息：任务参数 params（即真正发出/将要发出的请求体）、状态、API、时间线（入队/开始/结束/耗时）、生成的业务 id 数、关联数据的状态分布、异常摘要。调试时的标准用法：strategy.queue.list 找到 jobId → 本工具看参数 → strategy.queue.job.update 改参数 → strategy.queue.job.run 重跑。",
-            "required": [
-                "strategyId",
-                "direction",
-                "jobId"
-            ],
-            "properties": [
-                "strategyId",
-                "direction",
-                "jobId",
-                "includeK3Sdk",
-                "rawParams"
-            ]
-        },
-        {
-            "name": "strategy.queue.job.run",
-            "title": "手工执行队列任务",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "同步执行一条队列任务（源侧取数 / 目标侧写入），返回执行结果：耗时、返回行数、新增数据条数、请求与响应摘要、异常摘要、任务最终状态。**这是无守护进程环境下推进数据的唯一方式**（等价于人类在调试面板点「执行」）。direction=target 会真实写入外部系统，必须显式传 confirmWrite=true。默认 force=false：已完成/已失败的任务不会重复执行；需要重跑请显式 force=true（注意幂等）。",
-            "required": [
-                "strategyId",
-                "direction",
-                "jobId"
-            ],
-            "properties": [
-                "strategyId",
-                "direction",
-                "jobId",
-                "force",
-                "confirmWrite"
-            ]
-        },
-        {
-            "name": "strategy.queue.job.update",
-            "title": "修改队列任务参数",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "修改一条队列任务的任务参数（params），用于\"不改元数据、先改任务参数试对\"的调试循环。mode=merge（默认）只覆盖给定键；mode=replace 整份替换。返回被覆盖前的旧参数（可直接回滚）与最终任务状态。方案正在运行（调度未停止）时默认拒绝，避免与守护进程并发改同一个任务。改完用 strategy.queue.job.run 重跑。",
-            "required": [
-                "strategyId",
-                "direction",
-                "jobId",
-                "params"
-            ],
-            "properties": [
-                "strategyId",
-                "direction",
-                "jobId",
-                "params",
-                "mode",
-                "status",
-                "allowRunning"
-            ]
-        },
-        {
-            "name": "strategy.queue.list",
-            "title": "方案队列任务查询",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "查询指定集成方案的队列任务。direction 必须显式传 source（源队列）或 target（目标队列）。可按状态过滤（语义词：queue 队列中 / error 错误的 / finished 已完成 / await 等待中）、按时间范围与业务编号过滤。用于确认「重推后是否已入队」「积压有多少」。",
-            "required": [
-                "strategyId",
-                "direction"
-            ],
-            "properties": [
-                "strategyId",
-                "direction",
-                "status",
-                "number",
-                "begin",
-                "end",
-                "currentPage",
-                "pageSize"
-            ]
-        },
-        {
-            "name": "strategy.showConfig",
-            "title": "查看方案配置",
-            "scope": "strategy:read",
-            "risk": "read",
-            "requires_confirmation": false,
-            "description": "读取集成方案的源端或目标端元数据（接口参数、响应字段映射、转换规则等）。direction 必须显式传 source 或 target。修改配置前建议先调用本工具读取现状；返回内容中的凭据字段以 *** 脱敏。",
-            "required": [
-                "strategyId",
-                "direction"
-            ],
-            "properties": [
-                "strategyId",
-                "direction"
-            ]
-        },
-        {
-            "name": "strategy.source.update",
-            "title": "修改源端配置",
-            "scope": "strategy:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "修改集成方案的源端元数据（源接口的请求参数、响应字段映射、转换规则等）。改写前系统会自动备份当前配置并返回回滚句柄（backup.historyId / backup.md5），可用 strategy.config.rollback 一键回滚。推荐流程：strategy.showConfig 读取现状 → 本工具改写 → strategy.dispatchSource 联调验证。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "metaData",
-                "patch"
-            ]
-        },
-        {
-            "name": "strategy.start",
-            "title": "启动集成方案",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "启动指定集成方案的调度（cron 生效）。启动前系统会自动备份源/目标配置，因此误操作可通过配置历史回滚。幂等：已运行的方案再次调用不会重复处理。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId"
-            ]
-        },
-        {
-            "name": "strategy.stop",
-            "title": "停止集成方案",
-            "scope": "strategy:ops",
-            "risk": "ops",
-            "requires_confirmation": true,
-            "description": "停止指定集成方案的调度（cron 不再触发）。这是清理类操作（strategy.data.clean / strategy.data.cleanAll / strategy.queue.clean）的前置条件——清理要求方案既未上线也未运行。幂等：已停止的方案再次调用不会重复处理。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId"
-            ]
-        },
-        {
-            "name": "strategy.target.update",
-            "title": "修改目标端配置",
-            "scope": "strategy:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "修改集成方案的目标端元数据（目标接口的写入参数、字段映射、转换规则等）。改写前系统会自动备份当前配置并返回回滚句柄（backup.historyId / backup.md5），可用 strategy.config.rollback 一键回滚。推荐流程：strategy.showConfig 读取现状 → 本工具改写 → strategy.dispatchTarget 联调验证。",
-            "required": [
-                "strategyId"
-            ],
-            "properties": [
-                "strategyId",
-                "metaData",
-                "patch"
-            ]
-        },
-        {
-            "name": "strategy.update",
-            "title": "修改方案基本信息",
-            "scope": "strategy:write",
-            "risk": "write",
-            "requires_confirmation": true,
-            "description": "窄更新方案的基本属性与调度：名称、编码、描述、分组、优先级、源/目标 cron、生效时间、上次同步时间、最大重试次数。不会修改运行状态（status/is_online），也不会修改源/目标配置。返回 before / after / changed 便于复核；dryRun=true 只校验并返回将要发生的变更。",
-            "required": [
-                "strategyId",
-                "patch"
-            ],
-            "properties": [
-                "strategyId",
-                "patch",
-                "dryRun"
-            ]
-        }
-    ]
+  "schema_version": "1.0.0",
+  "server": "datahub-mcp",
+  "server_version": "0.1.0",
+  "capability_version": "2026-11-23",
+  "generated_at": "2026-11-23T15:36:23+0800",
+  "tool_count": 61,
+  "business_tool_count": 58,
+  "meta_tools": [
+    {
+      "name": "meta.capabilities"
+    },
+    {
+      "name": "meta.enums"
+    },
+    {
+      "name": "meta.whoami"
+    }
+  ],
+  "tools": [
+    {
+      "name": "asset.api.get",
+      "title": "接口资产详情",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按 apiId 获取接口资产详情：头部信息、请求字段清单、响应字段清单，以及示例请求/响应（示例来源于资产示例库；缺失时按字段默认值推导，并标注 source=derived）。**字段清单只用于核对字段事实**（名称/类型/必填）；字段映射必须按在跑方案（REF 模板）或蓝图逐项确认，禁止整份照搬本接口的字段快照。includeFields=false 时只返回头部与字段数，适合先探明规模再决定是否拉字段。字段清单最多返回 300 条/侧，超出部分以 omitted 计数标注。",
+      "required": [
+        "apiId"
+      ],
+      "properties": [
+        "apiId",
+        "includeFields"
+      ]
+    },
+    {
+      "name": "asset.api.list",
+      "title": "接口资产列表",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "查询接口资产目录。effect 决定用途：QUERY=源端取数接口，EXECUTE=目标端写入接口。返回 apiId/名称/编码/方向/方法/平台/审核状态/字段数。**用途仅限解析 apiId 与字段事实**：先在在跑方案（REF 模板）或蓝图中确定接口，再用本工具补 apiId；不要把资产默认快照当作字段映射的默认来源。只读；资产是全局目录（不按租户过滤）；不返回完整字段定义与适配器源码。",
+      "required": [],
+      "properties": [
+        "currentPage",
+        "effect",
+        "pageSize",
+        "platformId",
+        "search",
+        "status"
+      ]
+    },
+    {
+      "name": "asset.connector.get",
+      "title": "连接器详情",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按 connectorId 读取连接器详情：名称 / 所属平台 / 环境 / 环境地址 / 数据中心 / 操作者（部分脱敏）/ 是否已配置 app_secret / 是否配置 OAuth / 被多少方案的源端与目标端引用。**用途仅限解析 connectorId 与环境事实**，不作为配置依据；连接器配置以蓝图为准。**不返回任何凭据明文**（app_secret、密码、token 一律不出现）。",
+      "required": [
+        "connectorId"
+      ],
+      "properties": [
+        "connectorId"
+      ]
+    },
+    {
+      "name": "asset.connector.list",
+      "title": "连接器清单",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "列出当前租户的连接器（数据源实例）：id / 名称 / 所属平台 / 环境（development/test/production）/ 环境地址 host / 数据中心 / 启用状态。可按 platformId 或关键字过滤。**用途仅限解析 connectorId 与环境事实**（哪个环境、哪个数据中心），不用于确定配置内容。不含任何凭据（app_secret/密码一律不返回，账号与 app_id 为部分脱敏）。",
+      "required": [],
+      "properties": [
+        "currentPage",
+        "keyword",
+        "pageSize",
+        "platformId"
+      ]
+    },
+    {
+      "name": "asset.platform.get",
+      "title": "平台详情",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按 platformId 获取平台详情：名称/编码/分组/适配器/启用状态、该平台下接口资产数量，以及可选的平台应用清单（id/name/type）。**用于解析 platformId 与平台事实**，不作为接口选型或字段映射的依据；配置以在跑方案（REF 模板）或蓝图为准。不含连接器凭据与环境参数。",
+      "required": [
+        "platformId"
+      ],
+      "properties": [
+        "includeApps",
+        "platformId"
+      ]
+    },
+    {
+      "name": "asset.platform.list",
+      "title": "平台列表",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "查询平台目录（可接入的外部系统，如金蝶云星空、旺店通）。返回平台 id、名称、编码、分组、适配器类名与启用状态。**用途仅限解析 platformId 与平台编码**：平台/接口选型与配置以在跑方案（REF 模板）或蓝图为准，本目录不作为配置起点。只读，不返回任何连接器凭据或环境参数。注意：平台是**全局目录**，不属于某个租户。",
+      "required": [],
+      "properties": [
+        "currentPage",
+        "pageSize",
+        "search",
+        "status"
+      ]
+    },
+    {
+      "name": "audit.search",
+      "title": "查询 MCP 审计",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "查询本租户的 MCP 调用审计（倒序分页）。可按 Tool 名、状态（success/denied/error）、错误码、密钥 id 与时间范围过滤；时间窗最多 31 天，pageSize ≤100。默认不返回调用参数与结果载荷（includePayload=false）；打开后会脱敏并截断。租户范围恒定收敛到当前密钥所属租户，不接受 lesseeId 入参。",
+      "required": [],
+      "properties": [
+        "beginTime",
+        "currentPage",
+        "endTime",
+        "errorCode",
+        "grantId",
+        "includePayload",
+        "pageSize",
+        "payload",
+        "status",
+        "tool"
+      ]
+    },
+    {
+      "name": "exception.search",
+      "title": "同步异常检索",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "检索当前租户的同步异常记录。可按方案 id / 方案名称、错误描述关键字、接口名、平台 id、业务编号、数据 id 过滤，并可限定时间范围。典型用法：先 strategy.dbInfo 发现错误堆积后，用本工具定位具体失败原因与原始数据引用。",
+      "required": [],
+      "properties": [
+        "api",
+        "beginTime",
+        "currentPage",
+        "dataId",
+        "endTime",
+        "number",
+        "pageSize",
+        "platformId",
+        "strategyId",
+        "strategyName",
+        "text"
+      ]
+    },
+    {
+      "name": "mapping.category.create",
+      "title": "新建静态映射分类",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "新建一个静态映射分类（资源中心 → 静态映射资源）。分类名在租户内唯一。建好后用 mapping.relation.create / mapping.relation.import 填 a_value → b_value，最后把返回的 categoryId 挂到方案字段的 mapping.target 上。",
+      "required": [
+        "name"
+      ],
+      "properties": [
+        "describe",
+        "name"
+      ]
+    },
+    {
+      "name": "mapping.category.delete",
+      "title": "删除静态映射分类",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "删除一个静态映射分类，**并连带删除其全部 a/b 映射关系**，不可恢复。默认会先扫描引用：若该分类仍被方案字段使用，直接拒绝（错误码 mapping_category_in_use）；确认要删必须显式 force=true。首次调用返回影响面预检与确认令牌。",
+      "required": [
+        "categoryId"
+      ],
+      "properties": [
+        "categoryId",
+        "confirmationToken",
+        "dryRun",
+        "force"
+      ]
+    },
+    {
+      "name": "mapping.category.get",
+      "title": "静态映射分类详情",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "读取单个静态映射分类：名称/描述、条数、前 N 条映射样本、**被哪些方案的哪些字段引用**（含方向），并给出可直接粘进 meta_data 的 mapping 片段。排查\"映射配了但没生效\"时先看这里：引用为空 = 根本没挂上。",
+      "required": [
+        "categoryId"
+      ],
+      "properties": [
+        "categoryId",
+        "includeUsage",
+        "sampleSize"
+      ]
+    },
+    {
+      "name": "mapping.category.list",
+      "title": "静态映射分类清单",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "列出本租户的静态映射分类（如\"性别\"\"发票类型\"），含每个分类的映射条数与最近更新时间。可按名称搜索、分页。静态映射用于把源系统的值翻译成目标系统的值（a_value → b_value）。**先用本工具拿 categoryId，再查 mapping.relation.list / mapping.category.get。**",
+      "required": [],
+      "properties": [
+        "currentPage",
+        "pageSize",
+        "search"
+      ]
+    },
+    {
+      "name": "mapping.category.update",
+      "title": "修改静态映射分类",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "修改静态映射分类的名称或说明。改名不影响已挂载的方案（方案里存的是 categoryId，不是名称），返回 before/after 便于复核。",
+      "required": [
+        "categoryId"
+      ],
+      "properties": [
+        "categoryId",
+        "describe",
+        "name"
+      ]
+    },
+    {
+      "name": "mapping.relation.create",
+      "title": "新增映射关系",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "在指定分类下新增一条映射关系。a_value 在分类内唯一；a_value=\"*\" 是兜底行（每个分类只能有一条，命中不到任何精确值时使用）。批量导入用 mapping.relation.import 更快。",
+      "required": [
+        "categoryId",
+        "aValue",
+        "bValue"
+      ],
+      "properties": [
+        "aLabel",
+        "aValue",
+        "bLabel",
+        "bValue",
+        "categoryId"
+      ]
+    },
+    {
+      "name": "mapping.relation.delete",
+      "title": "删除映射关系",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按 relationId 删除一条映射关系。删除后该值在映射中变成\"未命中\"：若有 * 兜底行则走兜底，否则**原值直通**（不报错）。首次调用返回预检与确认令牌。",
+      "required": [
+        "relationId"
+      ],
+      "properties": [
+        "confirmationToken",
+        "dryRun",
+        "relationId"
+      ]
+    },
+    {
+      "name": "mapping.relation.import",
+      "title": "批量导入映射关系",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "批量写入映射关系（对应平台\"导入 Excel\"）。按 a_value 在分类内 upsert：已存在则更新 b_value/label，不存在则新增。单次 ≤500 行；支持 dryRun 预检（只返回将新增/更新多少）。行格式：{\"aValue\":\"1\",\"bValue\":\"男\"} 或 {\"a_value\":\"1\",\"b_value\":\"男\",\"a_label\":\"...\",\"b_label\":\"...\"}。",
+      "required": [
+        "categoryId",
+        "rows"
+      ],
+      "properties": [
+        "categoryId",
+        "dryRun",
+        "mode",
+        "rows"
+      ]
+    },
+    {
+      "name": "mapping.relation.list",
+      "title": "静态映射关系清单",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按分类分页查询映射关系（a_value → b_value，含可选 a_label/b_label）。不传 categoryId 时跨分类搜索，用于回答\"这个值到底被映射成什么/哪个分类里配了它\"。a_value=\"*\" 表示兜底行（未命中时使用）。",
+      "required": [],
+      "properties": [
+        "categoryId",
+        "currentPage",
+        "pageSize",
+        "search"
+      ]
+    },
+    {
+      "name": "mapping.relation.update",
+      "title": "修改映射关系",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按 relationId 修改一条映射的 a_value / b_value / 说明。只改传入的字段，返回 before/after。改 a_value 时仍会做分类内唯一性校验。",
+      "required": [
+        "relationId"
+      ],
+      "properties": [
+        "aLabel",
+        "aValue",
+        "bLabel",
+        "bValue",
+        "relationId"
+      ]
+    },
+    {
+      "name": "mapping.resolve",
+      "title": "试算静态映射结果",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按平台**完全相同的语义**试算映射结果，不改任何数据：给定分类 + 值 + 方向（positive=a→b，reverse=b→a），返回命中结果、命中方式（exact/wildcard/none）与命中行。支持一次传多个值。排查\"映射配了但结果不对\"时，这是最快的判据：matched=none 说明这个值没配对且无 * 兜底，平台会原值返回。",
+      "required": [
+        "categoryId"
+      ],
+      "properties": [
+        "categoryId",
+        "direction",
+        "value",
+        "values"
+      ]
+    },
+    {
+      "name": "mapping.usage",
+      "title": "静态映射引用关系",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "反查本租户所有方案里挂了静态映射的字段：方案、方向、字段名、映射分类与映射方向。不传 categoryId 时返回全量引用汇总 + **孤儿引用**（引用了已删除/不存在的分类 id）。删除分类前、或排查\"映射好像没挂上\"时用它。",
+      "required": [],
+      "properties": [
+        "categoryId"
+      ]
+    },
+    {
+      "name": "script.get",
+      "title": "查看脚本源码",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "读取集成方案的脚本源码。传 scriptId 取指定脚本；不传则返回该方案下全部脚本的源码。脚本按触发事件组织（如 AfterSourceDispatch、BeforeTargetInvoke），是数据转换与适配逻辑的载体。只读：本工具不修改脚本；改稿请输出代码并用 script.validate 自检，由用户在平台「事件加工厂」粘贴保存。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "scriptId",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "script.list",
+      "title": "方案脚本列表",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "列出指定集成方案的脚本：脚本名、触发事件（event，如 AfterSourceDispatch / BeforeTargetInvoke）、方向（source/target）、启用状态与排序。脚本源码请另用 script.get 获取。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "strategyId"
+      ]
+    },
+    {
+      "name": "script.validate",
+      "title": "脚本语法自检",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "对一段 PHP 脚本源码做语法校验（php -l），返回是否通过、错误行号与原文。无副作用、不落库。**本工具不保存脚本**：Agent 的输出流程是「生成代码 → 本工具自检 → 交给用户在平台「事件加工厂」粘贴保存」；保存前的语法错误应在这里一次修正。仅校验语法，不校验业务逻辑；脚本会以代码片段形式校验（缺少 <?php 时会自动补齐）。",
+      "required": [
+        "script"
+      ],
+      "properties": [
+        "script"
+      ]
+    },
+    {
+      "name": "strategy.checkList",
+      "title": "上线检查项",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "读取方案源端或目标端的上线检查项（check-list）：每项是否已确认、哪些是阻断项。direction 必填（source/target）。只读——不会替你勾选检查项；若返回 blockingCount>0，需先在平台完成确认再调用 strategy.online（或由管理员 force）。",
+      "required": [
+        "strategyId",
+        "direction"
+      ],
+      "properties": [
+        "direction",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.config.rollback",
+      "title": "回滚方案配置",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "把集成方案的源端或目标端配置回滚到指定的历史快照。historyId 与 md5 来自 strategy.source.update / strategy.target.update 返回的 backup 字段。回滚前系统会再给当前配置打一份快照（因此回滚本身也可被回滚）。",
+      "required": [
+        "strategyId",
+        "direction",
+        "historyId",
+        "md5"
+      ],
+      "properties": [
+        "direction",
+        "historyId",
+        "md5",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.copy",
+      "title": "复制集成方案",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "复制一个集成方案（含源/目标元数据与事件脚本），返回新方案 id，并回显 scriptsCopied（每个副本复制到的脚本数）。默认 count=1、不启动、保留源方案 last_sync、沿用源方案 direction，副本为停止且未上线状态。**复制后可直接 retarget**：传 source / target 覆盖对象（connectorId/platformId/apiId/metaData/adapter）即可把副本换到目标平台/接口/连接器，不必再\"随机借壳资产新建\"。换 apiId/platformId 时默认要求同次给该侧 metaData（retargetPolicy=provide），或传 retargetPolicy=reset 按新接口资产的默认快照重建（返回 meta_from=asset_snapshot，再用 strategy.patch 改映射）。只换 connectorId（同平台）时保留 meta_data 与 adapter。adapter 覆盖会做目录/平台/方向/部署/资产一致校验，确需强制时传 force=true（会告警）。这是安全的改动姿势：先 strategy.copy 副本（可 retarget）→ 在副本上 strategy.patch → strategy.checkList → strategy.online。dryRun=true 只校验并返回计划（含将应用的 retarget 计划），不落库。单次最多 10 个。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "autoStart",
+        "count",
+        "dryRun",
+        "force",
+        "keepLastSync",
+        "name",
+        "retargetPolicy",
+        "source",
+        "startAt",
+        "strategyId",
+        "target"
+      ]
+    },
+    {
+      "name": "strategy.create",
+      "title": "新建集成方案",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按蓝图新建一个集成方案：basic 为基本信息与调度，source 必须是取数接口（effect=QUERY），target 必须是写入接口（effect=EXECUTE）。连接器必须属于当前租户，code 在租户内唯一。⚠️ **优先改，不要建**：若同平台同对象已有在跑方案（含 REF 模板），请用 strategy.copy 复制后 strategy.patch 改字段；新建会产生重复调度与数据双写。**create 不继承脚本**：源方案若带事件加工脚本，请改走 strategy.copy，或传 scripts.fromStrategyId 从既有方案复制脚本行（同方案同事件唯一，冲突事件会跳过并在 scriptsSkipped 回显）。metaData 缺省用接口资产默认快照（metaDataMode=merge 旧语义：以快照为底递归合并）；metaDataMode=replace 时整份采用入参（不保留资产快照残留，修「17 个字段变 73 个」问题）。返回 meta_from（caller|asset_snapshot）与 meta_analysis（请求/响应字段数 before→after、重复参数），便于立刻判断是否残留资产快照。**重复方案护栏**：若同租户已存在「同源平台+接口 + 同目标平台+接口」且未删除的方案，默认返回 duplicate_strategy_warning 并列出候选（id/名称/状态）；确需新建请传 allowDuplicate=true。dryRun=true 只做完整校验并返回计划，不落库。默认不启动（autoStart=false）。",
+      "required": [
+        "basic",
+        "source",
+        "target"
+      ],
+      "properties": [
+        "allowDuplicate",
+        "autoStart",
+        "basic",
+        "dryRun",
+        "metaDataMode",
+        "scripts",
+        "source",
+        "target"
+      ]
+    },
+    {
+      "name": "strategy.data.aggregate",
+      "title": "方案数据 MongoDB 聚合分析",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "用标准 MongoDB 聚合管道分析指定方案 ADATA 集合（只读）。允许阶段：$match、$project、$addFields/$set/$unset、$group、$sort、$limit、$skip、$count、$unwind、$sample、$sortByCount、$replaceRoot/$replaceWith、$facet、$bucket/$bucketAuto、$densify/$fill/$setWindowFields。禁止写入与跨集合阶段（$out/$merge/$lookup/$graphLookup/$unionWith）以及代码执行类操作符（$where/$function/$accumulator）。示例：统计各状态数据量 [{\"$group\":{\"_id\":\"$status\",\"count\":{\"$sum\":1}}},{\"$sort\":{\"count\":-1}}]；按业务编号取最新一条 [{\"$sort\":{\"created_at\":-1}},{\"$group\":{\"_id\":\"$number\",\"doc\":{\"$first\":\"$$ROOT\"}}},{\"$limit\":10}]。单次最多返回 200 条、管道最多 12 个阶段、执行时间默认 5s（上限 10s）。",
+      "required": [
+        "strategyId",
+        "pipeline"
+      ],
+      "properties": [
+        "allowDiskUse",
+        "limit",
+        "maxTimeMS",
+        "pipeline",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.data.clean",
+      "title": "清空方案数据",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "清空指定集成方案的数据条目集合（保留运行日志与队列任务）。**破坏性操作**：数据条目是业务同步的产出，清空后无法通过本平台恢复。执行前必须先 strategy.stop 停止方案，且方案需已下线。**执行策略**：① 不带 confirmationToken 调用时总会返回 precheck（影响面条数）；② 密钥 trust=confirm/guarded，或影响面超过平台阈值时，还会返回 confirmationToken，需带令牌二次调用才执行；③ trust=full 且影响面未超阈值时直接执行（仍返回 precheck）；④ dryRun=true 只预演。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "confirmationToken",
+        "dryRun",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.data.cleanAll",
+      "title": "清空方案全部数据",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "清空指定集成方案的全部运行痕迹：运行日志、数据条目、源队列、目标队列。**破坏性最强**：所有历史记录与同步产出都会消失，无法通过本平台恢复。执行前必须先 strategy.stop 停止方案，且方案需已下线。**执行策略**：① 不带 confirmationToken 调用时总会返回 precheck（影响面条数）；② 密钥 trust=confirm/guarded，或影响面超过平台阈值时，还会返回 confirmationToken，需带令牌二次调用才执行；③ trust=full 且影响面未超阈值时直接执行（仍返回 precheck）；④ dryRun=true 只预演。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "confirmationToken",
+        "dryRun",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.data.distinct",
+      "title": "方案数据字段去重取值",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "对指定方案 ADATA 集合的某个字段执行 MongoDB distinct，返回去重后的取值列表（只读）。字段支持点号路径（如 content.FNumber）。可先 sample 看字段路径，再用本工具看有哪些枚举值。单次最多 500 个取值、执行时间默认 3s（上限 10s）。",
+      "required": [
+        "strategyId",
+        "field"
+      ],
+      "properties": [
+        "field",
+        "filter",
+        "limit",
+        "maxTimeMS",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.data.import",
+      "title": "导入方案数据",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "向方案的源数据集合导入 JSON 数据条目（不自动写入目标系统）。每行必须包含源接口的业务键字段（源端 meta_data.id / number 指向的字段）。限制：单次 ≤1000 行、≤1MB；行内禁止以 `$` 开头的键（防 Mongo 操作符注入）。duplicatePolicy=skip（默认）跳过已存在的业务键，error 则记为失败。autoDispatchTarget=true 才会立即触发目标端调度（需要 strategy:ops）。",
+      "required": [
+        "strategyId",
+        "rows"
+      ],
+      "properties": [
+        "autoDispatchTarget",
+        "dryRun",
+        "duplicatePolicy",
+        "rows",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.data.query",
+      "title": "方案数据 MongoDB 查询",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "用标准 MongoDB find 语法查询指定方案 ADATA 集合（只读）。filter 支持 $eq/$ne/$gt/$gte/$lt/$lte/$in/$nin/$exists/$regex/$elemMatch/$and/$or/$nor 等查询操作符；projection 支持 {\"字段\":1/0}；sort 支持 {\"字段\":1/-1}；skip/limit 分页。便捷约定：_id/source_job_id/target_job_id 可传 24 位十六进制字符串；created_at/response_at 等时间字段可传 \"YYYY-MM-DD HH:MM:SS\" 或 ISO8601（按应用时区解析）；也支持 Extended JSON：{\"$oid\":\"...\"}、{\"$date\":\"...\"}。返回 docs 以及 total（命中总数，可用 withTotal=false 跳过计数）、hasMore。单次最多 200 条、执行时间默认 3s（上限 10s）。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "filter",
+        "includeContent",
+        "limit",
+        "maxTimeMS",
+        "projection",
+        "skip",
+        "sort",
+        "strategyId",
+        "withTotal"
+      ]
+    },
+    {
+      "name": "strategy.data.sample",
+      "title": "方案数据示例与字段画像",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "查看指定集成方案 ADATA 集合的数据示例（默认 5 条），并同时返回字段画像（字段路径、类型集合、出现次数/覆盖率、示例值），用于在写 filter / aggregation 前了解真实数据结构。支持按数据状态语义词过滤（await/error/finished…）。返回字段：total（命中总数）、docs（示例文档）、schema.fields（字段画像）。典型链路：strategy.data.sample → strategy.data.query / strategy.data.aggregate。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "includeContent",
+        "limit",
+        "schemaSample",
+        "status",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.data.search",
+      "title": "方案数据条目查询",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "查询指定集成方案的数据条目。可按处理状态过滤（语义词：await 等待中 / error 错误的 / queue 队列中 / finished 已完成 / repeat 重复的 / unhandle 不处理 / continue 跳过调度 / fkc 未审核）、按业务编号或数据 id 精确匹配。返回每条数据的状态（含中文标签）、业务编号、创建时间与内容摘要。典型用法：列出 status=error 的条目以定位同步失败原因。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "currentPage",
+        "dataId",
+        "number",
+        "pageSize",
+        "status",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.data.setStatus",
+      "title": "修改数据条目状态",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "把指定的数据条目调整为某个处理状态。status **只能传语义词**，可选：await（等待中，即「重新推送」）/ repeat（重复）/ finished（已完成）/ error（错误）/ fkc（未审核）/ queue（队列中）/ continue（跳过调度）/ unhandle（不处理，即丢弃）。**不要传裸数字**——数字 0 与 2 的语义与直觉相反，容易造成数据被静默丢弃。重推标准编排：置为 await → strategy.dispatchTarget → strategy.queue.list 确认入队。",
+      "required": [
+        "strategyId",
+        "status"
+      ],
+      "properties": [
+        "dataId",
+        "dataIds",
+        "status",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.dbInfo",
+      "title": "方案数据概览",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "获取指定集成方案的存储计数快照：日志（记录/通知/成功/错误/致命/**调试留痕**）、数据（等待中/重复/已完成/错误/未审核/队列中）、源队列与目标队列（队列中/错误/已完成）的条数，以及最近一次队列运行的结果摘要（last_run）。**注意**：error / fatal 只统计真实错误，人工调试产生的请求/响应留痕单独计入 debug，它们不是错误，需要看正文请用 strategy.log.search（level=debug）。这是巡检的第一步：用一次调用判断方案整体健康度与积压位置，再决定是否下钻查询明细。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.dbResetStatus",
+      "title": "重置数据状态",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "把指定集成方案的**所有**数据条目状态重置为「等待中」，并清空目标侧异常队列。适用于方案长时间异常后整体重跑。注意这是全量操作，会影响所有数据条目；若只想处理个别数据，请用 strategy.data.setStatus。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.delete",
+      "title": "删除集成方案（软删除）",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "删除一个集成方案（**软删除**，不是物理删除）：复用平台既有删除语义，方案状态置为「已删除」（status=9），主表/源目标配置/事件脚本/数据集合都会保留，只是不再参与调度与列表。**执行前必须显式传 confirm=true**；建议先传 dryRun=true 查看影响面（当前状态、是否已上线、脚本数、近 7 天是否在跑）。运行中或已上线的方案会被拒绝删除（返回 strategy_running），请先 strategy.stop / strategy.offline。MCP 未暴露恢复 API，平台是否支持回收站恢复以实际能力为准：**暂不支持平台内恢复，请谨慎操作**。清理重复/废弃方案请优先用它，而不是继续新建；改现有方案请用 strategy.patch。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "confirm",
+        "confirmationToken",
+        "dryRun",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.dispatchSource",
+      "title": "触发源侧调度",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "手动触发指定集成方案的源侧调度：调用源接口拉取数据并生成源队列任务，返回组装后的请求与 jobId。**方案停止状态下同样可用**（调试期常态）：此时只入队、不会被自动消费，请用 strategy.queue.job.run 手工执行该 jobId。若方案处于运行中，守护进程会自动消费。需要\"必须是运行中才允许触发\"的严格语义时，传 requireRunning=true。适用于「等待中的数据没有增加」「源队列无积压但应有新数据」的场景。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "requireRunning",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.dispatchTarget",
+      "title": "触发目标侧调度",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "手动触发指定集成方案的目标侧调度：把数据推入目标队列，返回 jobId 与下一步。**方案停止状态下同样可用**（调试期常态）：此时只入队，请用 strategy.queue.job.run（direction=target, confirmWrite=true）手工执行。注意：入队不等于已写入外部系统，真正写入发生在队列任务被消费时。典型编排：strategy.data.setStatus 把错误数据置为「等待中」→ 本工具入队 → strategy.queue.job.run 消费 → 回查外部系统。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "requireRunning",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.get",
+      "title": "集成方案详情",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "获取单个集成方案的详情：名称、运行状态、上线状态、源/目标平台与连接器、源/目标调度周期（crontab）、源/目标元数据摘要（其中凭据字段以 *** 脱敏）。同时返回修改配置所需的「可改字段现状」：engine.mode / engine.direction（运行模式与流向）、source.adapter / target.adapter（适配器类名）、dispatch 前置任务依赖、callback 摘要、dispatcherNum、hasScripts / scriptsCount、start_at / last_sync。**默认只返回 basic（不含完整 meta_data）**，避免一次返回数万字符挤占上下文；需要完整配置时显式传 sections=source|target|all。修改配置前建议先调用本工具读取现状，再用 strategy.patch 改字段。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "sections",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.list",
+      "title": "集成方案列表",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "查询当前租户下的集成方案（数据同步任务）。支持按名称关键词、运行状态、分组、源/目标平台筛选，返回方案的稳定 id、名称、运行状态（带中文标签）、上线状态、源/目标平台与调度周期。本工具是所有方案级操作的第一步：拿到 strategyId 后才能调用其他 strategy.* 工具。",
+      "required": [],
+      "properties": [
+        "currentPage",
+        "group",
+        "pageSize",
+        "search",
+        "source_platform",
+        "status",
+        "target_platform"
+      ]
+    },
+    {
+      "name": "strategy.log.search",
+      "title": "方案运行日志检索",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "检索方案的运行日志正文（`<strategyId>_LOG`）。可按级别（debug/record/notice/success/error/fatal/all）、关键字、队列任务 id（jobId）与时间范围过滤，返回日志文本与业务载荷（请求/响应/连接信息）。**默认排除 debug**；排查\"这次请求/响应到底是什么\"时请显式传 level=debug。这是 exception.search 查不到问题时的下一跳：异常队列只记\"失败\"，日志才记\"过程\"。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "begin",
+        "currentPage",
+        "end",
+        "includeContent",
+        "jobId",
+        "level",
+        "pageSize",
+        "strategyId",
+        "text"
+      ]
+    },
+    {
+      "name": "strategy.offline",
+      "title": "下线集成方案",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "将方案置为未上线（is_online=0）。stopFirst=true（默认）时，若方案正在运行会先停止调度，避免「已下线但仍在产数据」的中间态。不会删除数据或配置，可随时重新 strategy.online。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "stopFirst",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.online",
+      "title": "上线集成方案",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "将方案置为已上线（is_online=1）。默认先检查源/目标两端的 check-list：存在未确认项时返回 check_list_blocked 并列出阻断项。force=true 可跳过阻断（高风险，结果会标注 forced，并写入审计）。上线不等于启动：调度仍由 strategy.start 控制。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "force",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.patch",
+      "title": "修改方案配置（字段级）",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "**修改现有集成方案的任意可改字段（优先用它，不要新建方案）**。支持 basic（名称/编码/分组/优先级/调度 cron/生效时间/lastSync/maxRetries）、dispatch 前置任务依赖、engine 运行模式（asyn-asyn / asyn-sync / event-sync）与流向、source/target 的 adapter 与 metaData（字段映射）、以及 source/target 三要素换绑（retarget）。patch 语义为 RFC 7386：对象深合并、**数组整替**、null 删除；metaDataMode=merge（默认）| replace。改数组里某个元素用 ops（JSON Pointer，如 /source/metaData/response/3/value），不必回传整棵树。写前自动备份 source/target 元数据并返回 backup（historyId + 可直接回灌的 undo_patch）；写后刷新调度缓存。dryRun=true 只返回校验结果、diff 与影响面（含 meta_analysis），不落库、不需要二次确认。不允许改 status / isOnline / process_id / callback：运行状态用 strategy.start/stop，上线状态用 strategy.online/offline。**推荐流程**：strategy.get 读现状 → strategy.patch 改字段 → strategy.showConfig 复核 → strategy.dispatchSource 联调。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "dryRun",
+        "force",
+        "metaDataMode",
+        "ops",
+        "patch",
+        "retargetPolicy",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.queue.clean",
+      "title": "清空方案队列",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "清空指定集成方案的源队列与目标队列，并把数据条目状态重置为初始状态。**破坏性操作**：执行前必须先 strategy.stop 停止方案，且方案需已下线。**执行策略**：① 不带 confirmationToken 调用时总会返回 precheck（影响面条数）；② 密钥 trust=confirm/guarded，或影响面超过平台阈值时，还会返回 confirmationToken，需带令牌二次调用才执行；③ trust=full 且影响面未超阈值时直接执行（仍返回 precheck）；④ dryRun=true 只预演。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "confirmationToken",
+        "dryRun",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.queue.job.get",
+      "title": "队列任务详情",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "按 jobId 读取一条队列任务的完整信息：任务参数 params（即真正发出/将要发出的请求体）、状态、API、时间线（入队/开始/结束/耗时）、生成的业务 id 数、关联数据的状态分布、异常摘要。调试时的标准用法：strategy.queue.list 找到 jobId → 本工具看参数 → strategy.queue.job.update 改参数 → strategy.queue.job.run 重跑。",
+      "required": [
+        "strategyId",
+        "direction",
+        "jobId"
+      ],
+      "properties": [
+        "direction",
+        "includeK3Sdk",
+        "jobId",
+        "rawParams",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.queue.job.run",
+      "title": "手工执行队列任务",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "同步执行一条队列任务（源侧取数 / 目标侧写入），返回执行结果：耗时、返回行数、新增数据条数、请求与响应摘要、异常摘要、任务最终状态。**这是无守护进程环境下推进数据的唯一方式**（等价于人类在调试面板点「执行」）。direction=target 会真实写入外部系统，必须显式传 confirmWrite=true。默认 force=false：已完成/已失败的任务不会重复执行；需要重跑请显式 force=true（注意幂等）。",
+      "required": [
+        "strategyId",
+        "direction",
+        "jobId"
+      ],
+      "properties": [
+        "confirmWrite",
+        "direction",
+        "force",
+        "jobId",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.queue.job.update",
+      "title": "修改队列任务参数",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "修改一条队列任务的任务参数（params），用于\"不改元数据、先改任务参数试对\"的调试循环。mode=merge（默认）只覆盖给定键；mode=replace 整份替换。返回被覆盖前的旧参数（可直接回滚）与最终任务状态。方案正在运行（调度未停止）时默认拒绝，避免与守护进程并发改同一个任务。改完用 strategy.queue.job.run 重跑。",
+      "required": [
+        "strategyId",
+        "direction",
+        "jobId",
+        "params"
+      ],
+      "properties": [
+        "allowRunning",
+        "direction",
+        "jobId",
+        "mode",
+        "params",
+        "status",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.queue.list",
+      "title": "方案队列任务查询",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "查询指定集成方案的队列任务。direction 必须显式传 source（源队列）或 target（目标队列）。可按状态过滤（语义词：queue 队列中 / error 错误的 / finished 已完成 / await 等待中）、按时间范围与业务编号过滤。用于确认「重推后是否已入队」「积压有多少」。",
+      "required": [
+        "strategyId",
+        "direction"
+      ],
+      "properties": [
+        "begin",
+        "currentPage",
+        "direction",
+        "end",
+        "number",
+        "pageSize",
+        "status",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.showConfig",
+      "title": "查看方案配置",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "读取集成方案的源端或目标端元数据（接口参数、响应字段映射、转换规则等）。direction 必须显式传 source 或 target。**大配置请用 view=summary**：只返回字段计数/分页键/operation/字段名摘要，不返回整棵字段树，避免几万字符挤占上下文；需要完整配置时用默认 view=full（语义与旧版完全一致）。修改配置前建议先调用本工具读取现状；返回内容中的凭据字段以 *** 脱敏。",
+      "required": [
+        "strategyId",
+        "direction"
+      ],
+      "properties": [
+        "direction",
+        "strategyId",
+        "view"
+      ]
+    },
+    {
+      "name": "strategy.source.update",
+      "title": "修改源端配置",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "修改集成方案的源端元数据（源接口的请求参数、响应字段映射、转换规则等）。改写前系统会自动备份当前配置并返回回滚句柄（backup.historyId / backup.md5），可用 strategy.config.rollback 一键回滚。推荐流程：strategy.showConfig 读取现状 → 本工具改写 → strategy.dispatchSource 联调验证。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "metaData",
+        "patch",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.start",
+      "title": "启动集成方案",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "启动指定集成方案的调度（cron 生效）。启动前系统会自动备份源/目标配置，因此误操作可通过配置历史回滚。幂等：已运行的方案再次调用不会重复处理。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.stop",
+      "title": "停止集成方案",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "停止指定集成方案的调度（cron 不再触发）。这是清理类操作（strategy.data.clean / strategy.data.cleanAll / strategy.queue.clean）的前置条件——清理要求方案既未上线也未运行。幂等：已停止的方案再次调用不会重复处理。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.target.update",
+      "title": "修改目标端配置",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "修改集成方案的目标端元数据（目标接口的写入参数、字段映射、转换规则等）。改写前系统会自动备份当前配置并返回回滚句柄（backup.historyId / backup.md5），可用 strategy.config.rollback 一键回滚。推荐流程：strategy.showConfig 读取现状 → 本工具改写 → strategy.dispatchTarget 联调验证。",
+      "required": [
+        "strategyId"
+      ],
+      "properties": [
+        "metaData",
+        "patch",
+        "strategyId"
+      ]
+    },
+    {
+      "name": "strategy.update",
+      "title": "修改方案基本信息",
+      "scope": null,
+      "risk": null,
+      "requires_confirmation": null,
+      "description": "窄更新方案的基本属性与调度：名称、编码、描述、分组、优先级、源/目标 cron、生效时间、上次同步时间、最大重试次数。不会修改运行状态（status/is_online），也不会修改源/目标配置。返回 before / after / changed 便于复核；dryRun=true 只校验并返回将要发生的变更。",
+      "required": [
+        "strategyId",
+        "patch"
+      ],
+      "properties": [
+        "dryRun",
+        "patch",
+        "strategyId"
+      ]
+    }
+  ]
 }

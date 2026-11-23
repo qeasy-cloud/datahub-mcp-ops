@@ -1,4 +1,4 @@
-# 02 · Tool 目录（60 个：57 业务 + 3 meta；2026-11-11 批次含 strategy.patch / strategy.delete）
+# 02 · Tool 目录（61 个：58 业务 + 3 meta；2026-11-23 批次含 strategy.patch / strategy.delete / 4 个 ADATA 查询）
 
 > 机器可读清单：`../tools/manifest.json`（由 `scripts/dh.py manifest` 抓 live server 生成，CI 校验文档一致性）。
 >
@@ -43,7 +43,7 @@
 
 ---
 
-## 3. strategy 只读（8，🟢 `strategy:read`）
+## 3. strategy 只读（12，🟢 `strategy:read`）
 
 ### `strategy.list`
 按名称/状态/分组/平台筛方案。返回 `strategyId`、`status`+`status_label`、`is_online`、
@@ -99,6 +99,50 @@
 ### `strategy.checkList`
 上线检查项（`direction` 必填）。返回是否已确认、哪些是阻断项。
 **只读**——不会替你勾选；`blockingCount>0` 时 `online` 会被拒绝（除非 `force`）。
+
+### ADATA 自由查询（4 个，v2.3.0，🟢 `strategy:read`）
+
+固定库 `LESSEE_<lesseeId>`、集合 `<strategyId>_ADATA`；全部只读、限量、限时。
+先用 `sample` 看结构，再用 `query` / `aggregate` / `distinct` 分析。
+
+#### `strategy.data.sample`
+看文档示例 + 字段画像（写 filter/aggregation 前先跑）。
+
+- 入参：`strategyId`、`limit`(1-20，默认 5)、`status`（语义词，可逗号分隔）、
+  `schemaSample`(10-200，默认 100)、`includeContent`(默认 true)。
+- 返回：`total`、`docs[]`、`schema.fields[]`（`path`/`types`/`count`/`coverage`/`example`）。
+- 坑：`types` 是数组（同一字段可能既有 `string` 又有 `null`）；`content.FNumber` 这类点号路径
+  可直接用于 `query`/`distinct`。
+
+#### `strategy.data.query`
+标准 MongoDB `find`。
+
+- 入参：`filter`、`projection`、`sort`(≤3 字段)、`skip`(≤100000)、`limit`(1-200，默认 20)、
+  `withTotal`(默认 true)、`includeContent`(默认 true)、`maxTimeMS`(≤10000)。
+- 返回：`docs`、`count`、`total`、`hasMore`、`truncated`、`elapsed_ms`。
+- 坑 1：`projection` **不能混用**包含与排除（`_id` 除外），否则 `invalid_projection`。
+- 坑 2：时间字段是 **float 秒**（不是 BSON Date），可直接传 `"2026-11-01 00:00:00"`，会自动转 epoch。
+- 坑 3：`_id` 传 24 位十六进制字符串会自动转 ObjectId；`{"$oid":"..."}` 也支持。
+
+#### `strategy.data.aggregate`
+标准聚合管道（≤12 阶段；`$facet` 子管道也计入）。
+
+- 允许：`$match/$project/$addFields/$set/$unset/$group/$sort/$limit/$skip/$count/$unwind/$sample/
+  $sortByCount/$replaceRoot/$replaceWith/$facet/$bucket/$bucketAuto/$densify/$fill/$setWindowFields`。
+- 禁止：`$out/$merge`、`$lookup/$graphLookup/$unionWith`、`$where/$function/$accumulator`、
+  `$collStats/$indexStats/$currentOp`、`$search/$searchMeta/$vectorSearch`。
+- 返回：`docs`、`returned`、`stages`、`truncated`、`elapsed_ms`。
+- 大分组：先 `$match` 缩小范围，或 `allowDiskUse=true` + 调大 `maxTimeMS`。
+
+#### `strategy.data.distinct`
+字段去重取值（≤500）。
+
+- 入参：`strategyId`、`field`（点号路径，不能以 `$` 开头）、`filter`、`limit`、`maxTimeMS`。
+- 返回：`values`、`count`、`distinct_total`、`truncated`。
+- 用途：先看 `status`、`content.FNumber` 等有哪些值，再写 `$in` 过滤。
+
+> 共同边界：`filter ≤16KB`、`pipeline ≤32KB`、JSON 深度 ≤8、`$regex ≤200` 字符、
+> 响应 ≤512KB（超出丢尾部文档并标 `truncated`）。跨租户 id → `strategy_access_denied`。
 
 ---
 

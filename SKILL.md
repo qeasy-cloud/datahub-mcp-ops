@@ -3,9 +3,9 @@ name: datahub-mcp-ops
 description: Operate, debug and implement integrations on Datahub / 轻易云 (qeasy.cloud) through its MCP endpoint — reference-first and modify-first. Use when the user mentions 轻易云 / Datahub / 数据集成 / 方案 / 队列 / 字段映射 / 重推 / 巡检 / 调试 / 抄在跑方案 / REF, or provides a strategyId, jobId or 金蝶 error message and wants it understood, fixed or verified. Covers history reference (REF) cards from the knowledge MCP and template adaptation; the manual debug loop (dispatch → read queue job → consume it → patch job params → re-run) even with no daemon; copy-first / patch-first modification instead of creating new strategies; field-contract, Chinese-label, detail-row and time-parameter checkpoints; script policy (output code only); asset tools used only to resolve ids and field facts; write verification and safe cleanup.
 license: MIT
 metadata:
-  version: 2.2.1
+  version: 2.3.0
   homepage: https://github.com/qeasy-cloud/datahub-mcp-ops
-  capability_version: "2026-11-11"
+  capability_version: "2026-11-23"
   min_server: datahub-mcp 0.1.0
   knowledge_mcp_tools: 4
   languages: zh-CN, en
@@ -48,7 +48,7 @@ metadata:
 ```bash
 # ① 客户端（零依赖，Python 3.9+；也可用任意 MCP 客户端）
 python scripts/dh.py doctor                     # 检查端点/密钥/协议版本
-python scripts/dh.py tools                      # 列出 58 个工具（按域分组）
+python scripts/dh.py tools                      # 列出 61 个工具（按域分组）
 
 # ② 我是谁、能干什么
 python scripts/dh.py call meta.whoami
@@ -209,7 +209,7 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 
 ---
 
-## 5. 工具地图（58 个：55 业务 + 3 meta）
+## 5. 工具地图（61 个：58 业务 + 3 meta）
 
 > 全量入参/返回/坑 → `references/02-tool-catalog.md`；机器可读清单 → `tools/manifest.json`。
 > 命名规律：`域.对象.动作`；风险等级 🟢read / 🟡write / 🟠ops / 🔴destructive。
@@ -218,7 +218,7 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 |---|---|
 | **meta**（3） | `whoami` `capabilities` `enums` |
 | **asset**（6，全局只读） | `platform.list` `platform.get` `connector.list` `connector.get` `api.list` `api.get` |
-| **strategy 读**（8） | `list` `get` `showConfig` `dbInfo` `queue.list` `queue.job.get` `log.search` `data.search` |
+| **strategy 读**（12） | `list` `get` `showConfig` `dbInfo` `queue.list` `queue.job.get` `log.search` `data.search` `data.sample` `data.query` `data.aggregate` `data.distinct` |
 | **strategy 调试**（5） | `dispatchSource` `dispatchTarget` `queue.job.run` `queue.job.update` `exception.search` |
 | **strategy 写**（6） | `create` `copy` `update` `source.update` `target.update` `config.rollback`（+ 服务端 capability ≥ `2026-11-11` 的 `strategy.patch` / `strategy.delete`，见 §10） |
 | **strategy 生命周期**（5） | `start` `stop` `online` `offline` `checkList` |
@@ -234,6 +234,10 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 
 **v2.1.0 新增的 12 个 `mapping.*`**：静态映射是"值翻译表"（一个源值 → 一个目标值，`*` 行做兜底）。
 两系统对接时 `1/2/0` → `男/女/未知`、`发票类型` → 金蝶编码，几乎每个方案都会用到。详见 §5.1。
+
+**v2.3.0 新增的 4 个 ADATA 自由查询**：`strategy.data.sample/query/aggregate/distinct`。
+先 `sample` 看字段画像，再用标准 MongoDB `filter` / 聚合管道做自主分析；只读、限量 200 条、
+限时 10s、禁 `$out/$merge/$lookup/$where/$function`。详见 §5.2。
 
 ### 5.1 静态映射怎么用（一句话 + 三个必须知道的坑）
 
@@ -254,6 +258,34 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 | **删分类连带删表** | 删完方案开始输出原值 | 仍被引用时工具直接拒绝（`mapping_category_in_use`），要删必须显式 `force=true` |
 
 反向翻译（目标值 → 源值）用 `direction: "reverse"`；同一分类两个方向共用一张表（`a_value` ↔ `b_value`）。
+
+### 5.2 ADATA 自由查询（v2.3.0）
+
+固定库 `LESSEE_<lesseeId>`、集合 `<strategyId>_ADATA`，**不能指定库/集合**；全部只读。
+
+| 步骤 | Tool | 说明 |
+|---|---|---|
+| 看结构 | `strategy.data.sample` | 示例文档 + `schema.fields[]`（路径/类型/覆盖率/示例）；建议先跑 |
+| 精确取数 | `strategy.data.query` | 标准 find：`filter` / `projection` / `sort` / `skip` / `limit(≤200)` / `withTotal` |
+| 分组统计 | `strategy.data.aggregate` | 聚合管道（≤12 阶段），允许 `$match/$group/$project/$sort/$unwind/$facet/$setWindowFields` 等 |
+| 枚举取值 | `strategy.data.distinct` | 某字段去重取值（≤500），适合先看编码/状态分布 |
+
+```json
+// 近 7 天各状态数量
+{"strategyId":"<id>","pipeline":[
+  {"$match":{"created_at":{"$gte":"2026-11-16 00:00:00"}}},
+  {"$group":{"_id":"$status","n":{"$sum":1}}},
+  {"$sort":{"n":-1}}
+]}
+```
+
+便捷转换：`_id`/`source_job_id` 可传 24 位十六进制；`created_at` 等时间字段可传
+`"YYYY-MM-DD HH:MM:SS"`（也支持 `{"$date":"..."}`）；出参 `_id` 为字符串、`status` 带
+`status_label`、时间带 `<field>_text`。
+
+边界：`filter ≤16KB`、`pipeline ≤32KB`、`$regex ≤200` 字符、响应 `≤512KB`；
+禁止 `$out/$merge`（写库）、`$lookup/$graphLookup/$unionWith`（跨集合）、
+`$where/$function/$accumulator`（服务端代码）。跨租户 id → `strategy_access_denied`。
 
 ---
 
@@ -311,7 +343,7 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 | 端点 | `https://www.qeasy.cloud/api/mcp`（无状态；`mcp.qeasy.cloud` 为备用入口） | 租户实例 `/api/mcp` |
 | 状态 | **无状态**（每请求自带 Key，GET/DELETE 405） | 有状态（`Mcp-Session-Id`） |
 | 认证 | `qk_…`（Agent 可 PoW 自助注册，Standard 20 次/天） | `sh-…`（租户开放中心签发） |
-| 工具 | **4 个**：`knowledge_domains` / `knowledge_search` / `knowledge_fetch` / `knowledge_reference` | 58 个运维/实施工具（+ 新版 `strategy.patch`） |
+| 工具 | **4 个**：`knowledge_domains` / `knowledge_search` / `knowledge_fetch` / `knowledge_reference` | 61 个运维/实施工具（+ 新版 `strategy.patch` / `data.query` 系列） |
 | 用途 | **设计期**：抄在跑方案（REF）、字段怎么填、增量口径、失败模式、客户案例 | **落地期**：读配置、改配置、跑任务、验结果 |
 
 ### 8.1 什么时候用哪个工具
@@ -380,13 +412,14 @@ python scripts/dh.py call strategy.queue.job.run  --args '{"strategyId":"<SID>",
 
 ## 10. 版本与兼容
 
-- 本 SKILL `2.2.1`：文档基线 = Datahub MCP `datahub-mcp 0.1.0` / `x-capability-version 2026-11-11`（60 工具 = 3 meta + 57 业务；含 `strategy.patch` / `strategy.delete`）。
+- 本 SKILL `2.3.0`：文档基线 = Datahub MCP `datahub-mcp 0.1.0` / `x-capability-version 2026-11-23`（61 工具 = 3 meta + 58 业务；含 `strategy.patch` / `strategy.delete` / `strategy.data.sample|query|aggregate|distinct`）。
 - **兼容矩阵**：
 
 | 服务端 capability | 本 SKILL 可用性 |
 |---|---|
-| `2026-10-28`（58 工具） | ✅ 除 `strategy.patch` 外全部可用（用 `source.update`/`target.update` 等价写法） |
+| `2026-10-28`（58 工具） | ✅ 除 `strategy.patch` / ADATA 查询外全部可用（用 `source.update`/`target.update` 等价写法） |
 | `2026-11-11`+（60 工具 + `strategy.patch` / `strategy.delete`） | ✅ 全部可用；`strategy.patch` 为修改类默认入口；`strategy.delete` 仅软删除 |
+| `2026-11-23`+（61 工具，新增 4 个 ADATA 查询） | ✅ 全部可用；分析数据优先 `data.sample → data.query/aggregate/distinct` |
 | `2026-10-26` / 39/46 工具 | ⚠️ 部分工具不存在，按 `meta.capabilities` 的实际 `tool_count` 降级 |
 
 - `tools/manifest.json` 是**服务端生成物**：本版发布前如服务端尚未部署 `2026-11-11`，

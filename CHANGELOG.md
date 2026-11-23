@@ -4,6 +4,34 @@ All notable changes to this skill package are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-11-23
+
+ADATA 自由查询成为一等能力：新增 4 个只读 Tool，Agent 可用**标准 MongoDB 语法**自主分析方案数据。
+工具总数 60 → **61**（58 业务 + 3 meta，`MCP_SURFACE=saas` + full scope 口径；注册表 64 = 61 业务 + 3 meta）。
+
+### Added
+
+- **`strategy.data.sample`**：示例文档 + 字段画像（path/types/coverage/example），写 filter 前先看结构。
+- **`strategy.data.query`**：标准 `find`（filter/projection/sort/skip/limit/withTotal），
+  支持 ObjectId 十六进制字符串与时间字符串自动转换。
+- **`strategy.data.aggregate`**：聚合管道白名单（≤12 阶段），禁止 `$out/$merge/$lookup/$where/$function`。
+- **`strategy.data.distinct`**：字段去重取值（点号路径，≤500）。
+- `references/02`：新增 4 个 Tool 的入参/返回/坑。
+- `tools/manifest.json`：meta 单列（`meta_tools` 对象数组），`capability_version` 从 initialize 读取
+  （2026-11-23）；`tool_count` 与 `validate_skill.py` 的 `tools + meta` 约定一致。
+
+### Security
+
+- 固定库 `LESSEE_<lesseeId>` + 集合 `<strategyId>_ADATA`，不接受 Agent 指定库/集合；
+- 只读（无 `$out/$merge`），禁跨集合（`$lookup/$graphLookup/$unionWith`）与代码执行（`$where/$function/$accumulator`）；
+- 资源上限：filter ≤16KB、pipeline ≤32KB、深度 ≤8、`$regex` ≤200 字符、执行 ≤10s、响应 ≤512KB。
+
+### Verification
+
+- PHPUnit：`DataQueryValidationTest` 10 项 + `ExtensionToolContractTest` 覆盖 4 个新 Tool；
+- 真实 MCP E2E：`handoff/e2e/mcp_mongoquery_e2e.py` **33/33**（含跨租户、`$where/$out/$lookup` 负例）；
+- `validate_skill.py`：11 项检查全过（61 tool / 58 business / 3 meta）。
+
 ## [2.2.1] - 2026-11-11
 
 服务端 2026-11-11 批次 2（`strategy.delete` 软删除）纳入文档基线：工具面 60（3 meta + 57 业务）；
