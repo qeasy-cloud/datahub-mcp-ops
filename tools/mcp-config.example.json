@@ -14,13 +14,7 @@
       "mcpServers": {
         "datahub": {
           "command": "npx",
-          "args": [
-            "-y",
-            "mcp-remote",
-            "https://<HOST>/api/mcp",
-            "--header",
-            "Authorization: Bearer ${DH_MCP_KEY}"
-          ]
+          "args": ["-y", "mcp-remote", "https://<HOST>/api/mcp", "--header", "Authorization: Bearer ${DH_MCP_KEY}"]
         }
       }
     },
